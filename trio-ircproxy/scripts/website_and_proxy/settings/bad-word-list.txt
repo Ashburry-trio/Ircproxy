@@ -1,0 +1,31 @@
+; below the lines starting with ; are the items of the list
+; of bad words. @active is a used as a list marker for excluding 
+; the lower part of the list. The lists are processed in Python for speed.
+god
+g0d
+damn
+damnit
+damnu
+bastard
+assterd
+ass terd
+whore
+cunt
+faggot
+cocksucker
+cock sucker
+suck my cock
+suck a dick
+eat a dick
+cum gobbler
+gobble up my cum
+gobble my cum
+@active = false
+holybible
+holy bible
+
+; god is bad word because it is weaponized
+; damn and damnit are bad words because they cause disease
+; the rest of the bad words are just some plain 'ol bad words I thought of.
+; holy bible is almost a bad word because it makes for poor discussions,
+; in this case it is not a bad word because it is below trigger "@active = false"
