@@ -21,8 +21,8 @@ if EXIST ".\activate.bat" (
     ) ELSE IF EXIST "..\..\trio-ircproxy\" (
         call "..\activate.bat"
         goto end1
-    ) ELSE IF EXIST "%UserProfile%\trio-ircproxy\" (
-        call "%UserProfile%\trio-ircproxy\activate.bat"
+    ) ELSE IF EXIST "%UserProfile%\Documnents\trio-ircproxy-main\" (
+        call "%UserProfile%\Documents\trio-ircproxy-main\activate.bat"
         goto end1
     ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\" (
         call "%UserProfile%\Documents\trio-ircproxy\activate.bat"
@@ -34,8 +34,8 @@ goto done
 IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
     ".\trio-ircproxy\venv\Scripts\python.exe" .\trio-ircproxy\trio-ircproxy.py
     goto done
-) ELSE IF EXIST "%UserProfile%\trio-ircproxy\trio-ircproxy\" (
-        "%UserProfile%\trio-ircproxy\trio-ircproxy\venv\Scripts\python.exe" "%UserProfile%\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\" (
+        "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\venv\Scripts\python.exe" "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
 ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\" (
         "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\venv\Scripts\python.exe" "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
@@ -43,7 +43,7 @@ IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
 )
 :end
 echo.
-echo unable to locate program ".\trio-ircproxy\venv\Scripts\python.exe"
+echo unable to locate directory "\trio-ircproxy-main\trio-ircproxy\venv\Scripts\python.exe"
 pause
 :done
 call "deactivate.bat"
