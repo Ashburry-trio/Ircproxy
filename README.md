@@ -1,58 +1,87 @@
-Trio-ircproxy.py - an proxy server for your IRC client. Copyright (c) 2023,
-Master Sire G.I. Kenggi Peters phd. ret.
+**Trio-ircproxy.py** - an proxy/bounce server for your IRC client. Copyright (c) 2023,
+*Master Sire G.I. Kenggi J.P. phd. ret.*
 
-This is a work in progress, if you wish to help then submit a pull request
-and/or write issues for all and any requests. The issues is working as an to-do
-list of features.
+This is a work in progress, if you wish to help then write issues for all and any requests. The issues is working as an to-do list of features.
 
 Issues (requests) List :
-`https://github.com/ashburry-chat-irc/trio-ircproxy/issues` \# Setup
+**https://github.com/ashburry-chat-irc/trio-ircproxy/issues** 
 
-- Download and Install `Python 3.11` or later from `https://www.python.org/downloads/`
+-   Download and Install **Python 3.11** or later from
+    **https://www.python.org/downloads/**
 
-- Download clink setup.exe from `https://github.com/chrisant996/clink/releases`
+-   Download clink setup.exe from
+    **https://github.com/chrisant996/clink/releases** and install
 
-- Extract trio-ircproxy.zip to %UserProfile% - open `file explorer` by right
-clicking on the `Windows Start Menu` button and choose `file explorer`
+-   Extract **trio-ircproxy.zip** to **%UserProfile%\Documents\**
 
-- navigate `file explorer` to `%UserProfile%\trio-ircproxy` directory
+-   open **cmd.exe** by right clicking on the **Windows Start Menu** button and choose **run**
 
-- double click on `install.bat` just once after extraction `of trio-ircproxy.zip` 
+-   choose to run **cmd.exe**
 
-- run apps with a double click on `runall.bat` 
+-   at the command prompt type **cd %UserProfile%\Documents**
 
-- load `mIRC-Load_This_in_Remotes-INSTALL.mrc` in mirc/adiirc remotes section
+-   type *dir/w* to list the files then **cd trio-ircproxy** or **cd
+    trio-ircproxy-main**
 
-Keep in mind that your `trio-ircproxy` folder may have the name
-`trio-ircproxy-main`. Also the usage of `%UserProfile%` is a windows shortcut to
-your home directory which is `c:\users\USER\` replace `USER` with your actual
-`username`. If you do not know your username then try using `%UserProfile%`
-which will expand to your user home directory such as `c:\user\USER\` It is
-the same as ~ on linux.
+-   type **install.bat -3.11** the *-3.11* is the *Python version* you have installed.
 
-To deploy
-on `PythonAnywhere.com`:
+-   load **mIRC-Load_This_in_Remotes-INSTALL.mrc** in mirc/adiirc remotes section
 
--   Create an zip file of two directories, first is `trio-ircproxy\scripts\www`
-    and second is `trio-ircproxy\scripts\website_and_proxy`
+Keep in mind that your **trio-ircproxy** folder may have the name
+**trio-ircproxy-main**. Also the usage of **%UserProfile%** is a windows shortcut to
+your home directory which is *c:\users\USER\* replace *USER* with your actual
+*username*. If you do not know your username then try using **%UserProfile%**
+which will expand to your *user home directory* such as *c:\\user\\USER\\* it is
+the same as \~ on linux.
 
--   Upload zip file to PythonAnywhere.com in the `/home/username/` directory.
-    Replace `username` with your `pythonanywhere.com username`.
+To deploy on *PythonAnywhere.com*:
 
--   Open a terminal on `PythonAnywhere`
+-   Upload **\\trio-ircproxy\\scripts\\deploy.zip** file to *PythonAnywhere.com*
+    in the **/home/username/** directory. Replace *username* with your
+    pythonanywhere.com username.
 
--   In terminal type `unzip file.zip -d .` (notice the unzip command ends with
-    an period)
+-   Open a bash terminal on `PythonAnywhere`
 
--   Edit the `www\www-server-config.ini` so the `web-server-hostname` is that of
-    `your webserver` put `username.pythonanyhwere.com` without the http(s).
-     And the port is set to `80 or 443` use 443 for `encryption`.
+-   In terminal type **unzip deploy.zip -d .** (notice the unzip command ends
+    with an period). Unzip in the *root home directory*.
 
--   On the `PythonAnywhere.com` website: edit your `www/www-server-config.ini`
-    put your URL (username.pythonanywhere.com) for `web-server-hostname` and set
-    the `web-server-port` to `80 or 443` it is not used.
+-   On your computer edit the
+    **\\trio-ircproxy\\scripts\\www\\www-server-config.in**`i` so the
+    **web-server-hostname** is that of your webserver put
+    *username.pythonanyhwere.com* without the http(s). And the port is set to*
+    80 or 443 *use 443 for encryption\`.
 
--   `Reload your web-server` from the `WEB tab` on `PythonAnyhwere.com`.
+-   On the **PythonAnywhere.com** website: edit your
+    **/www/www-server-config.ini** put your URL
+
+(*username.pythonanywhere.com*) for **web-server-hostname** and set the
+**web-server-port** to** ***80 or 443*.
+
+-   Go to your `WEB tab` by clicking the hamburger on the top left corner.
+
+-   In the **WEB tab** set the **source code** to `/home/username/www/` with
+    username as your PythonAnywhere.com username.
+
+-   Edit the **WSGI configuration file** to look like this below:
+
+ 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import sys
+# add your project directory to the sys.path
+project_home = '/home/USERNAME/www/'
+if project_home not in sys.path:
+    sys.path = [project_home] + sys.path
+
+# import flask app but need to call it "application" for WSGI to work
+from flask_app import app as application
+
+On the "project_home" line change USERNAME to your PythonAnywhere username. Uncomment "import sys"
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-   Click **SAVE** then click the hamburger to go to the** WEB tab** and
+    click-on **reload website.com** at the top.
 
 Copyright License
 =================

@@ -3,11 +3,12 @@ cls
 echo.
 echo Adding terminate_autoanswer = 1 to clink settings file
 echo if you do not have clink download the latest setup.exe from https://github.com/chrisant996/clink/releases
+if "%1" == "-3.13" goto start
+if "%1" == "-3.12" goto start
 if "%1" == "-3.11" goto start
 if "%1" == "-3.10" goto start
-if "%1" == "-3.09" goto start
 echo.
-echo ERROR: You must run install.bat with a python version parameter. Example: "install.bat -3.11" (to -3.09).
+echo ERROR: You must run install.bat with a python version parameter. Example: "install.bat -3.10" (to -3.13).
 goto complete
 :start
 echo Ctrl+C to Exit
@@ -25,24 +26,5 @@ pip install --upgrade pip
 echo Installing requirments via "pip install -r .\trio-ircproxy\requirements.txt"
 pip install -r .\trio-ircproxy\requirements.txt
 echo.
-:start
-echo [ Y ]. Run web-server and irc bounce server by calling 'runall.bat'.
-echo [ N ]. Finish installation and end.
-echo.
-choice /C yn /N /D y /T 35 /M "Would you like to run the web-server and the bounce server (by calling 'runall.bat')? It will open in two separate cmd.exe windows. [Y/n]?"
-if %ERRORLEVEL% == 255 goto end
-if %ERRORLEVEL% == 2 goto end
-if %ERRORLEVEL% == 1 goto yes
-if %ERRORLEVEL% == 0 goto end
-:yes
-call runall.bat
-goto done
-:end
-echo.
-echo finished installation. Type "runall.bat" to open the server apps or "runproxy.bat" to run the bounce server.
-goto complete
-:done
-echo.
-echo finished installation.
+call runproxy.bat
 :complete
-

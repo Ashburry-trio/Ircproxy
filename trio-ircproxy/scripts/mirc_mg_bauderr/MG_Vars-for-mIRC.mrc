@@ -38,7 +38,7 @@
 %bde_glob_topic_history_#ircdhelp#1672107776 Hello - Please ask your questions in the open channel and wait for a reply. Please do not /msg the Ops. Thank you.
 %bde_glob_bad_script_warn#UnderNet#ircdhelp $false
 %bde_glob_oper-scan-net-chan#UnderNet#ircdhelp $false
-%bde_glob_client-id#blank 66801468
+%bde_glob_client-id#blank 57504527
 %bde_glob_bad_script_warn#UnderNet#5ioE $false
 %bde_glob_oper-scan-client#blank $false
 %bde_glob_auto_ia1#blank $false

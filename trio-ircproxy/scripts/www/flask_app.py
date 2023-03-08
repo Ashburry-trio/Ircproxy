@@ -87,7 +87,7 @@ def create_app():
 
 def create_database(app):
     if not exists(DB_NAME):
-        db.create_all(app=app)
+        db.create_all(app)
 
 from website import Debug
 

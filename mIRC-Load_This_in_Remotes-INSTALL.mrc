@@ -26,13 +26,10 @@ alias baud_load_all {
   /load -ru $qt($scriptdirtrio-ircproxy\scripts\mirc_mg_bauderr\ $+ %fn)
   var %fn = MG_Vars-for- $+ %mg_app $+ .mrc
   /load -rv $qt($scriptdirtrio-ircproxy\scripts\mirc_mg_bauderr\ $+ %fn)
-
-
 }
 alias -l mg_set_app {
   if (adiirc isin $mircexe) { set %mg_app Adiirc }
   if (mirc isin $mircexe) { set %mg_app mIRC }
   if ($version == 4.2) { set %mg_app Adiirc }
   if ($version > 7.0) { set %mg_app mIRC }
-
 }

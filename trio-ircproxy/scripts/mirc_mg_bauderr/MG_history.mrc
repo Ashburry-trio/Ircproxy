@@ -1,12 +1,8 @@
-on *:start: {
-  exp_topics
-}
-on *:exit: {
-  exp_topics
-}
-on *:load: {
-  exp_topics
-}
+on *:start:exp_topics
+on *:exit:exp_topics
+on *:load:exp_topics
+on *:connect:exp_topics
+
 alias -l exp_topics {
   var %check = $varname_global(topic_history_*,*)
   var %i = 0
