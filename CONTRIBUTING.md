@@ -21,12 +21,12 @@ Thank you for reading.
 
 *Contributers:*
 ====================
-***#Python on irc.libera.chat***
+**#Python on irc.libera.chat**
 Much Apperciation goes out to many of the people in #Python on irc.libera.chat --+
 Many of the people in #Python have helped me by providing me with solutions of various problems in an professional manner.
-special thank-you to ***bjs*** for continuous help to many people, such as me, who are asking in #Python on Libera.chat
+special thank-you to **bjs** for continuous help to many people, such as me, who are asking in #Python on Libera.chat
 
-***Ashburry --***
+**Ashburry --**
 The founder, and coder of the bulk of the project.
 
 *End of file*
