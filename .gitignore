@@ -1,5 +1,6 @@
-*/.idea/*
-python3107.chm
+*\.idea\*
+*.chm
+*\deploy\*
 
 *.pem
 *.key
