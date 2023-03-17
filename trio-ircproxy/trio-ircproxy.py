@@ -17,17 +17,32 @@ This is a pre-alpha (work in progress), don't expect it to
 function properly however, it will
 (not)function safely at best.
 
-You must run; in the terminal (just once):
-    cd trio-ircproxy
-    install.bat
-    runproxy.bat
-      or
-    python trio-ircproxy\trio-ircproxy.py
-before running 'python3.10 trio_ircproxy.py' or runall.bat
+You must run; in the terminal:
+    'cd Documents"
+    "unzip -d trio-ircproxy-main.zip .
+    "cd trio-ircproxy-main"
 
-use the install.bat if you are on windows. It just sets up venv and
+Windows:
+    "install.bat -3.11"  -+-+- (just once, forever)
+    "runproxy.bat"
+        or
+    "activate.bat"
+    python.exe trio-ircproxy\trio-ircproxy.py
+
+
+use the install.bat -3.11 if you are on windows. It just sets up venv and
  installs pip, upgrades pip, and installs requirements.txt.
- You also have runproxy.bat and runweb.bat or runboth.bat.
+ You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat
+ and python.exe trio-ircproxy\trio-ircproxy.py
+
+Linux:
+    python3.11 -m venv ./trio-ircproxy/venv
+    source ./trio-ircproxy/venv/bin/activate
+    pip3 install -r ./trio-ircproxy/requirements.txt
+# If using Linux for Windows change /bin/ to /Scripts/
+    python ./trio-ircproxy/trio-ircproxy.py
+
+I need to create an install script for Linux and an runproxy for Linux
 """
 
 from __future__ import annotations

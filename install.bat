@@ -20,9 +20,8 @@ py %1 -m venv .\trio-ircproxy\venv
 call .\trio-ircproxy\venv\Scripts\activate.bat
 echo Install wheel and pip...
 pip install wheel
-.\trio-ircproxy\venv\Scripts\python.exe -m pip install pip
-.\trio-ircproxy\venv\Scripts\python.exe -m pip install --upgrade pip
-pip install --upgrade pip
+python.exe -m pip install pip
+python.exe -m pip install --upgrade pip
 echo Installing requirments via "pip install -r .\trio-ircproxy\requirements.txt"
 pip install -r .\trio-ircproxy\requirements.txt
 echo.

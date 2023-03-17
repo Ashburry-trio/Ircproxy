@@ -32,18 +32,18 @@ echo ERROR: You must call "runproxy.bat" while inside the "trio-ircproxy" root d
 goto done
 :end1
 IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
-    ".\trio-ircproxy\venv\Scripts\python.exe" .\trio-ircproxy\trio-ircproxy.py
+    python.exe .\trio-ircproxy\trio-ircproxy.py
     goto done
 ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\" (
-        "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\venv\Scripts\python.exe" "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
+        python.exe "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
 ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\" (
-        "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\venv\Scripts\python.exe" "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+        python.exe "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
         goto done
 )
 :end
 echo.
-echo unable to locate directory "\trio-ircproxy-main\trio-ircproxy\venv\Scripts\python.exe"
+echo current working directory must be ".\trio-ircproxy-main\"
 pause
 :done
 call "deactivate.bat"

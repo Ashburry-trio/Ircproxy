@@ -1,0 +1,16 @@
+{% extends "base.html" %} {% block title %}BNC settings login{% endblock %}
+{% block h1 %}Reset Login was Accepted{% endblock h1 %}>
+{% block content %}
+ {% if accounts %}
+<p>Your login details have returned existing account(s).
+  A link to change your password has been emailed to the following accounts:</p>
+<p>{% for email in accounts %}
+  {{ email }} {% if accounts[email] == False %}- ERROR {% else %}- working{% endif %}<br />
+  {% endfor %}
+</p>
+{% else %}
+<p>No accounts have been found. Make sure you've entered your UserName and/or Email correctly. You may also
+<a href="/admin/signup.htm">sign-up for a new account</a> if you have a valid email address with less than 5 non-expired
+    accounts.</p>
+{% endif %}
+{% endblock %}

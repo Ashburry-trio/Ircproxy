@@ -1,4 +1,3 @@
-
 on *:signal:baud_unload: {
   mg_set_app
 }

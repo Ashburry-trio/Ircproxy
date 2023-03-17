@@ -19,6 +19,10 @@ on *:connect: {
 ; Create on quit for $me /scid -a /set variable value $+ $$network to see 
 ; if any connections remain on the quit network befre unsetting %bde_*allow* $+ $network $+ *
 
+alias ialupdated {
+  if ($1 == $null) { return }
+  return $iif(($chan($1).ial == $true), - updated, - false)
+}
 on *:part:#: {
   if ($nick == $me) { .timerallow $+ $$network $+ $chan 1 10 /unset %bde_*allow* $+ $$network $+ $chan $+ * }
 }

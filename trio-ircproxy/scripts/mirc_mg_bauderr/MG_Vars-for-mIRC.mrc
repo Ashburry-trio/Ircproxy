@@ -38,7 +38,7 @@
 %bde_glob_topic_history_#ircdhelp#1672107776 Hello - Please ask your questions in the open channel and wait for a reply. Please do not /msg the Ops. Thank you.
 %bde_glob_bad_script_warn#UnderNet#ircdhelp $false
 %bde_glob_oper-scan-net-chan#UnderNet#ircdhelp $false
-%bde_glob_client-id#blank 57504527
+%bde_glob_client-id#blank 40320165
 %bde_glob_bad_script_warn#UnderNet#5ioE $false
 %bde_glob_oper-scan-client#blank $false
 %bde_glob_auto_ia1#blank $false
@@ -95,14 +95,10 @@
 %bde_glob_topic_history_#pyca#1673359282 Discussion about the development of Python Cryptography Authority libraries (cryptography, pynacl, pyOpenSSL, bcrypt) - https://github.com/pyca/cryptography - "Disastrous Security Apparatus and Elliptic Curve Disastrous Security Apparatus"
 %bde_glob_topic_history_#libera#1673374552 Welcome to Libera Chat support (no: politics, covid, IRC drama, cryptocurrency) | Cloak → #libera-cloak | FAQ & guides https://libera.chat/guides/faq | Find staff with /stats p or /who libera/staff/* | Advice for helpers: https://libera.chat/guides/helpers | Channel Search: /msg alis help list | 🐉 not to blame.
 %bde_glob_topic_history_#libera-cloak#1673374616 say "!cloakme" for a user/* cloak
-%bde_glob_allow_bad_script_ban#Libera.Chat#linux $true
-%bde_glob_allow_bad_word#Libera.Chat#linux $true
-%bde_glob_allow_room_default#Libera.Chat#linux $true
+%bde_cid_trio-ircproxy.py!active#16 $true
+%bde_cid_trio-ircproxy.py!active#1 $true
 %bde_glob_allow_bad_script_ban#Libera.Chat#python $true
-%bde_glob_allow_room_sharing#Libera.Chat#linux $true
-%bde_glob_allow_room_idle#Libera.Chat#linux $true
-%bde_glob_allow_room_binart#Libera.Chat#linux $true
-%bde_glob_allow_room_name#Libera.Chat#linux $true
-%bde_glob_allow_room_url#Libera.Chat#linux $true
-%bde_glob_allow_bad_chan#Libera.Chat#linux $true
-%bde_glob_allow_rand_text#Libera.Chat#linux $true
+%bde_glob_topic_history_#ircnow#1678940039 IRCNow: Of the Users, By the Users, For the Users -- For a bouncer or shell account, join *ONLY ONE* of these channels: #planetofnix, #nastycode, #inspirenet, #ircforever, #bsdforall, #freeirc, #shelltalk, #rpblc, #thunderirc, #oddprotocol, or #lecturify -- don't register with multiple channels
+%bde_glob_topic_history_#bsdforall#1678940068 Welcome To #BSDForAll Open Community Channel with '2C3a4n6d9i10e12s'!("One-Roof" Integrated All-In-One Official Channel for BSDForAll). See: https://bsdforall.org | ZNC @ https://bnc.bsdforall.org | WebMail@ https://webmail.bsdforall.org | WebChat @ https://bsdforall.org/chat/ | https://bsdforall.org/teamjoin/ | Tor Onion @ http://bsdnetoezbtsbrzlnrgxn7iv6qokouuyr4dkd7f2xt6fmmacvi2kjjad.onion | "We want a polite room!"
+%bde_glob_topic_history_#autoop#1678941438 You are welcome to become one of a lifetime OP! Please /join #autoop and be a operator! (Channel is logged)
+%bde_glob_allow_bad_script_ban#Libera.Chat#autoop $true
