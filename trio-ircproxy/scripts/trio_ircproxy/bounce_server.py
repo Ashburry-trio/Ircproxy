@@ -28,8 +28,8 @@ async def bounce_server_listen(cs_before_login: trio.SSLStream) -> None:
         while True:
             try:
                 with trio.fail_after(40):
-                    line = await cs_before_login.readline()
-                    print('read : ' + line)
+                    line = await cs_before_login.receive_some(1024)
+                    print('read : ' + str(line))
             except trio.TooSlowError as exc:
                 print('Login too Slow')
 

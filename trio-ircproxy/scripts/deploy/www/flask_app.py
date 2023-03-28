@@ -93,7 +93,7 @@ def update_record():
     return jsonify(user.to_json())
 @app.route('/', methods=['DELETE'])
 @login_required
-def delte_record():
+def delete_record():
     record = json.loads(request.data)
     user = User.objects(name=record['name']).first()
     if not user:

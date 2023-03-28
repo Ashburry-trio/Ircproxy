@@ -1,7 +1,7 @@
 *Contributing*
 ====================
 I am very happy you have found my CONTRIBUTING file and I am eager to have, in any form possible, your contribution to 
-Trio-ircproxy and Machine Gun mSL script named Bauderr and the website/webserver named RoseMay.  
+Trio-ircproxy and Machine Gun mSL script named Bauderr and the web-site/web-server named RoseMay.  
 For the most part I am coding the bulk of the applications, after which it will be easier to 
 contribute as there won't be such are defecit of code. You are welcome to fork the project at any time if you want to write your own app, 
 just include the LICENSE (or include similar licence suitable for open source software).  I doubt anyone would want to fork at such an 
@@ -21,12 +21,13 @@ Thank you for reading.
 
 *Contributers:*
 ====================
-**#Python on irc.libera.chat**
-Much Apperciation goes out to many of the people in #Python on irc.libera.chat --+
-Many of the people in #Python have helped me by providing me with solutions of various problems in an professional manner.
-special thank-you to **bjs** for continuous help to many people, such as me, who are asking in #Python on Libera.chat
+**Friends;** - I would like to give a warm *Thank-You* to my dear friend ***David Coffey*** for being so generous and helpful; I couldn't have done this much without him sharing his skills and effort.
+
+**#Python on irc.libera.chat** - Much Apperciation goes out to many of the people in *#Python on irc.libera.chat* --+
+Many of the people in *#Python* have helped me by providing me with solutions of various problems in a professional manner.
+special thank-you to **bjs** for continuous help to many people, such as me, who are asking in *#Python on Libera.chat*.
 
 **Ashburry --**
 The founder, and coder of the bulk of the project.
 
-*End of file*
+*End of file.*

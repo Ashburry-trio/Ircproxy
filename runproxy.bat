@@ -15,21 +15,18 @@ echo be available and running.
 echo.
 echo Running ".\trio-ircproxy\venv\Scripts\activate.bat" and "python.exe .\trio-ircproxy\trio-ircproxy.py"
 echo please wait...
-if EXIST ".\activate.bat" (
+IF EXIST ".\activate.bat" (
     call ".\activate.bat"
     goto end1
-    ) ELSE IF EXIST "..\..\trio-ircproxy\" (
-        call "..\activate.bat"
-        goto end1
-    ) ELSE IF EXIST "%UserProfile%\Documnents\trio-ircproxy-main\" (
+    ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\" (
         call "%UserProfile%\Documents\trio-ircproxy-main\activate.bat"
         goto end1
     ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\" (
         call "%UserProfile%\Documents\trio-ircproxy\activate.bat"
         goto end1
 )
-echo ERROR: You must call "runproxy.bat" while inside the "trio-ircproxy" root directory where it is located, after running "install.bat" (just once).
-goto done
+echo ERROR, unable to find activate.bat
+goto f
 :end1
 IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
     python.exe .\trio-ircproxy\trio-ircproxy.py
@@ -43,7 +40,10 @@ IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
 )
 :end
 echo.
-echo current working directory must be ".\trio-ircproxy-main\"
+echo cannot find "\trio-ircproxy\trio-ircproxy.py" running default location:
+echo if the following command fails then its because you have not run "install.bat"
+python.exe "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
 pause
 :done
 call "deactivate.bat"
+:f

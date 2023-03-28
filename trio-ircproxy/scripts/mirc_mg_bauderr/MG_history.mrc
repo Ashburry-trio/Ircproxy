@@ -3,14 +3,14 @@ on *:exit:exp_topics
 on *:load:exp_topics
 on *:connect:exp_topics
 
-alias -l exp_topics {
+alias exp_topics {
   var %check = $varname_global(topic_history_*,*)
   var %i = 0
   :loop
   inc %i
   %check2 = $var($eval(%check,1),%i)
   if (%check2 == $null) { return }
-  if ($calc($ctime - $gettok(%check2,-1,$chr(35))) < $calc(24 * 36)) { unset $eval(%check2,1) }
+  if ($calc($ctime - $gettok(%check2,-1,35)) > $calc(60 * 60 * 24 * 14)) { unset $eval(%check2,1) | dec %i }
   goto loop
 }
 on *:topic:#: {
@@ -27,10 +27,9 @@ alias topic_history_remove {
   if (!$1) { return }
   unset $varname_global(topic_history_ $+ $1,*)
 }
-alisa me echo asdf
 alias topic_history_add {
   var %chan = $1
-  if (!$strip(%chan)) || ($strip($2-) == $null) { return }
+  if (!$strip(%chan)) || (!$strip($2-)) { return }
   var %i = 0
   var %check = $varname_global(topic_history_ $+ %chan,*)
   var %varname

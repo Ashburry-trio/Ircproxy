@@ -57,8 +57,38 @@ def send_join(server_socket: trio.SocketStream | trio.SSLStream, chan_with_key: 
     circular.sc_send(server_socket, "join :" + chan_with_key)
     return None
 
+def ss_version_reply(nick) -> str:
+    """The version reply sent to the server, just the text.
+    @rtype: str
+        Vars:
+            :@param nick: a string of the nickname to send to
+            :@return: string of the version reply including NOTICE nick :version reply
 
-def ss_send_ctcpreply(server_socket: trio.SocketStream | trio.SSLStream, nick: str, ctcp: str, reply: str) -> None:
+    """
+    return (
+            "NOTICE "
+            + nick
+            + f" :\x01VERSION \x02Trio-ircproxy.py\x02 {VERSION_NUM} from "
+            + "\x1fhttps://Ashburry.PythonAnywhere.com\x1f\x01"
+    )
+
+
+def ss_send_version_reply(any_sock: trio.SocketStream | trio.SSLStream, to_nick: str) -> None:
+    """Send a version reply to a nickname from a socket
+
+    :@param from_cs: the ss_socket to send the version reply to the irc server
+    :@return: None
+    @rtype: None
+
+    """
+
+    ss_socket = any_sock
+    if socket_data.which_socket[ss_socket] == 'cs':
+        ss_socket = socket_data.mysockets[any_sock]
+    actions.sc_send(ss_socket, ss_version_reply(to_nick))
+
+
+def ss_send_ctcpreply(server_socket: trio.SocketStream | trio.SSLStream, nick: str, ctcp: str, reply_str: str) -> None:
     """Send an ctcpreply to the nickname
     Vars:
         :@param server_socket: the socket to the irc-server
@@ -70,7 +100,7 @@ def ss_send_ctcpreply(server_socket: trio.SocketStream | trio.SSLStream, nick: s
     """
     if not server_socket:
         return None
-    ctcp_reply = f"NOTICE {nick} :\x01{ctcp} {reply}\x01"
+    ctcp_reply = f"NOTICE {nick} :\x01{ctcp} {reply_str}\x01"
     circular.sc_send(server_socket, ctcp_reply)
     return None
 
@@ -130,8 +160,8 @@ def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> Optional[str
     if to:
         # Send to client
         if socket_data.mynick:
-            msg = ':' + socket_data.mynick + "!trio-ircproxy@mg-script.com " + msg
-            print(" MY NICK IS : " + socket_data.mynick)
+            msg = ':' + socket_data.mynick[to] + "!trio-ircproxy@mg-script.com " + msg
+            print(" MY NICK IS : " + socket_data.mynick[to])
         else:
             return ''
     return msg
@@ -179,7 +209,7 @@ def ss_send_notice(server_socket: trio.SocketStream | trio.SSLStream, nick: str,
     """
     if not server_socket or not nick or not msg:
         return None
-    msg = "NOTICE " + nick + " :" + msg
+    msg = f"NOTICE {nick} :{msg}"
     circular.sc_send(server_socket, msg)
     return None
 
@@ -192,6 +222,6 @@ def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, msg: str) 
         :@return: None
 
     """
-    msg = f":*status!trio-ircproxy@mg-script.com NOTICE {nick} :{msg}"
+    msg = f":*mg-script!trio-ircproxy@mg-script.com NOTICE {nick} :{msg}"
     circular.sc_send(client_socket, msg)
 

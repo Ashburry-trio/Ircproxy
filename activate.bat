@@ -13,6 +13,9 @@ IF EXIST .\trio-ircproxy\venv\Scripts\activate.bat (
     ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\" (
         call "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\venv\Scripts\activate.bat"
         goto end
+) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\" (
+        call "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\venv\Scripts\activate.bat"
+        goto end
 )
 echo ERROR: Run activate.bat while inside the "trio-ircproxy" root directory.
 :end

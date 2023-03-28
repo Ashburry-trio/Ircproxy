@@ -157,7 +157,6 @@ class SocketData:
             other = cls.mysockets[xxs]
         except KeyError:
             other = None
-        print('clear_data: clearing...')
         try:
             if cls.which_socket[xxs] == "cs":
                 client_socket = xxs

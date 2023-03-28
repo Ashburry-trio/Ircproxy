@@ -5,9 +5,10 @@
 
 This is an async IRC proxy server. It augments the irc
 clients server connection adding functionality. It also allows
-communicating to the pythonanywhere.com website server. The proxy itself
-is interfaced by an irc client by using your 192.168.x.x ip for proxy server
-hostname/ip with the port number 1234 and default login "user : pass"
+communicating to the pythonanywhere.com website server (eventually).
+The proxy itself is interfaced by an irc client by using your 127.0.0.1 ip
+for proxy server hostname/ip with the port number 4321 and default
+login ussername/password is "user : pass"
 in your irc client. for help type "/raw proxy-help" or maybe
 "/quote proxy-help" or just "/proxy-help" with your irc client
 after connecting to any irc server through the proxy server.
@@ -17,6 +18,9 @@ This is a pre-alpha (work in progress), don't expect it to
 function properly however, it will
 (not)function safely at best.
 
+You may use this with a znc (bounce) service however your
+proxy server functionaltiy will only work while a client is connected
+through the proxy server.
 You must run; in the terminal:
     'cd Documents"
     "unzip -d trio-ircproxy-main.zip .
@@ -35,14 +39,19 @@ use the install.bat -3.11 if you are on windows with Python 3.11. It just sets u
  You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat and
   python.exe trio-ircproxy\trio-ircproxy.py
 
+
+
 Linux:
     python3.11 -m venv ./trio-ircproxy/venv
     source ./trio-ircproxy/venv/bin/activate
     pip3 install -r ./trio-ircproxy/requirements.txt
-# If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
+#  If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
+#  After executing the above commands you onnly need to execute the following
+#  two commands to run the proxy server.
+    source ./trio-ircproxy/venv/bin/activate
     python ./trio-ircproxy/trio-ircproxy.py
 
-I need to create an install script for Linux and an runproxy for Linux
+I need to create an install script for Linux and the runproxy for Linux
 """
 
 from __future__ import annotations
@@ -64,7 +73,6 @@ from scripts.trio_ircproxy import actions
 from scripts.trio_ircproxy import ial
 from scripts.trio_ircproxy import proxy_commands
 from scripts.trio_ircproxy import xdcc_system
-from scripts.trio_ircproxy import bounce_server
 from scripts.website_and_proxy import Settings_ini
 from scripts.website_and_proxy.socket_data import SocketData as socket_data
 from scripts.website_and_proxy.socket_data import aclose_sockets
@@ -85,6 +93,7 @@ import os
 _dir = path.dirname(path.abspath(__file__))
 chdir(realpath(dirname(expanduser(argv[0]))))
 
+VERSION_NUM = "11.01.15"
 
 def colourstrip(data: str) -> str:
     """Strips the mIRC colour codes from the text in data
@@ -182,37 +191,6 @@ def is_socket(xs: trio.SocketStream | trio.SSLStream) -> bool:
     return True
 
 
-def ss_version_reply(nick) -> str:
-    """The version reply sent to the server, just the text.
-    @rtype: str
-        Vars:
-            :@param nick: a string of the nickname to send to
-            :@return: string of the version reply including NOTICE nick :version reply
-
-    """
-    return (
-            "NOTICE "
-            + nick
-            + " :\x01VERSION \x02Trio-ircproxy.py\x02 11.01.15 from "
-            + "\x1fhttps://Ashburry.PythonAnywhere.com\x1f\x01"
-    )
-
-
-def ss_send_version_reply(from_cs: trio.SocketStream | trio.SSLStream, to_nick: str) -> None:
-    """Send a version reply to a nickname from a socket
-
-    :@param from_cs: the ss_socket to send the version reply to the irc server
-    :@return: None
-    @rtype: None
-
-    """
-
-    ss_socket = from_cs
-    if socket_data.which_socket[ss_socket] == 'cs':
-        ss_socket = socket_data.mysockets[from_cs]
-    actions.sc_send(ss_socket, ss_version_reply(to_nick))
-
-
 async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """Close both irc-server and irc-client sockets together
 
@@ -223,11 +201,11 @@ async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """
     try:
         await sc_socket.aclose()
-    except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError, BaseException):
+    except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError):
         pass
     try:
         await socket_data.mysockets[sc_socket].aclose()
-    except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError, BaseException):
+    except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError, KeyError):
         pass
     return None
 
@@ -362,7 +340,7 @@ async def proxy_make_irc_connection(cs_waiting_connect: trio.SocketStream
         granted: bytes = b"HTTP/1.0 200 connection started with irc server.\r\n\r\n"
 
         if port in (6697, 9999, 443, 6699, 6999, 7070):
-            context_ssl = create_default_context(purpose=Purpose.CLIENT_AUTH)
+            context_ssl = create_default_context()
             server_socket_ssl = trio.SSLStream(server_socket_nossl, context_ssl,
                                     server_hostname=ss_hostname, https_compatible=False)
 
@@ -386,10 +364,10 @@ async def proxy_make_irc_connection(cs_waiting_connect: trio.SocketStream
                                socket_data.send_buffer[client_socket], 'cs')
             nursery.start_soon(write_loop, client_socket, server_socket,
                                socket_data.send_buffer[server_socket], 'ss')
-    except (BaseException, EndSession, trio.MultiError):
+    except (BaseException, EndSession, BaseExceptionGroup):
         socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
-        return
+        #return
         raise
     finally:
         # proxy_make_irc_connection()
@@ -464,6 +442,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
         :@return: bool or None. False if silenced or None if relayed to client.
 
     """
+    print('ss_updateial')
     newnick: str
     awaymsg: str
     return_silent: bool = False
@@ -499,15 +478,16 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                 socket_data.set_face_nicknet(client_socket)
             ial.IALData.ial_add_newnick(client_socket, old_nick, nick_src, src_nick_full)
             return None
+    print(single_line)
     if len(split_line) < 2:
         return None
     if chan:
         chan = chan.lstrip(':')
     if split_line[1] == 'mode':
         return None
-
     if split_line[1] == "part":
-        chan = split_line[2].strip(':')
+        chan = split_line[2].lstrip(':')
+        print(F"PARTING CHANNEL {chan}")
         nick_src: str = split_line[0].split('!')[0]
         nick_src = nick_src.lstrip(':')
         if nick_src == socket_data.mynick[client_socket]:
@@ -650,106 +630,6 @@ def lower_strip(text: str) -> str:
     text = colourstrip(text)
     return text
 
-
-async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
-                            server_socket: trio.SocketStream | trio.SSLStream) -> None:
-    """
-    Receive a chunk of data and call cs_received_line() when atleast one line has completed
-    @param client_socket: the socket to the irc-client
-    @param server_socket: the socket to the irc-server
-    @return: None.
-
-    """
-    bytes_cap: int = 0
-    byte_string: str = ''
-    max_RECV: int = 355350000
-    bytes_data: bytes = b''
-    while True:
-        if len(bytes_data) == max_RECV:
-            await trio.sleep(1)
-        bytes_data = b''
-        if not is_socket(client_socket) or not is_socket(server_socket):
-            return None
-        closed: bool = False
-        try:
-            bytes_data = await client_socket.receive_some(max_RECV)
-        except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError):
-            closed = True
-        if not bytes_data:
-            if closed is False:
-                print("trio-ircproxy: client closed the socket.")
-            elif closed:
-                print('trio-ircproxy: socket to client crashed.')
-            if client_socket in socket_data.mysockets:
-                await actions.send_quit(client_socket)
-            return None
-        bytes_cap += len(bytes_data)
-        if ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
-            socket_data.dcc_send[server_socket]) or \
-                ("mynick" in socket_data.dcc_chat[client_socket] and "othernick" in
-                 socket_data.dcc_chat[server_socket]):
-            actions.sc_send(server_socket, bytes_data)
-            continue
-        byte_string += usable_decode(bytes_data)
-        byte_string: str = byte_string.replace('\r', '\n')
-        while '\n\n' in byte_string:
-            byte_string = byte_string.replace('\n\n', '\n')
-        byte_string: str = byte_string.lstrip('\n')
-        find_n: int = byte_string.find('\n')
-        single_line: str
-        while find_n > -1:
-            byte_string: str = byte_string.lstrip('\n')
-            single_line: str = byte_string[0:find_n + 1]
-            strip_line: str = lower_strip(single_line)
-            split_line: list[str] = strip_line.split(' ')
-            cs_received_line(client_socket, server_socket, single_line, split_line)
-            try:
-                byte_string = byte_string[find_n + 1:]
-            except IndexError:
-                byte_string = ''
-                break
-            find_n = byte_string.find('\n')
-
-
-def sock_005(client_socket: trio.SocketStream | trio.SSLStream, single_line: str) -> None:
-    """Parses the 005 numeric from the irc-server
-
-    :@param client_socket: the socket to the irc-client
-    :@param single_line: a single line of text read from a socket
-    :@return: None
-    """
-    upper_line_str: str = single_line.strip()
-    upper_line: list[str] = upper_line_str.split(' ')
-    if upper_line_str[0] == ':':
-        upper_line = upper_line[3:]
-    else:
-        upper_line = upper_line[2:]
-    key: str
-    value: str | int
-    if not upper_line:
-        return None
-    for name in upper_line:
-        if name[0] == ":":
-            break
-        if "=" in name:
-            key = name.split("=")[0]
-            value = name.split("=")[1]
-        else:
-            key = name
-            value = name
-        if value.isdigit():
-            value = int(value)
-        key = key.lower()
-        socket_data.raw_005[client_socket][key] = value
-    socket_data.set_face_nicknet(client_socket)
-    return None
-
-
-async def exploit_triggered(cs, ss):
-    print("mIRC exploit attempt from irc server.")
-    await aclose_sockets(sockets=(cs, ss))
-
-
 async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
                             server_socket: trio.SocketStream | trio.SSLStream) -> bool | None:
     """Read loop to receive data from the socket and pass it to
@@ -826,7 +706,7 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             # in Loop
             in_read = False
         # out loop
-    except (ValueError, KeyError, Exception, trio.MultiError, trio.BrokenResourceError,
+    except (ValueError, KeyError, Exception, BaseExceptionGroup, trio.BrokenResourceError,
             trio.ClosedResourceError, trio.BusyResourceError, BaseException, BaseExceptionGroup):
         print('value, key error, exception')
         raise
@@ -851,17 +731,17 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
     """
     # from above ss_received_chunk()
-    #print('from SS : '+single_line)
+
     nick_src: str = ''
     if socket_data.dcc_null[server_socket] == True:
         actions.sc_send(client_socket, single_line)
         return None
     original_line: str = single_line
     orig_upper_split: list[str] = ' '.split(single_line)
+    print('from SS -1: '+single_line)
     if check_mirc_exploit(original_line) is True:
         await exploit_triggered(client_socket, server_socket)
         return None
-    await trio.sleep(0)
     if len(split_line) == 2 and socket_data.dcc_null[server_socket] is False and (
             split_line[0] == "100" or split_line[0] == "101"):
         # 100 or 101 nickname
@@ -878,6 +758,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         actions.sc_send(client_socket, single_line)
         return None
     socket_data.dcc_null[server_socket] = None
+
+
     if original_line[0] == '@':
         if not original_line.startswith('@time') and not original_line.startswith('@account'):
             print(original_line)
@@ -886,6 +768,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         orig_upper_split = original_line.split(' ')[1:]
     else:
         orig_upper_split = original_line.split(' ')
+    ial_send = await ss_updateial(client_socket, server_socket, single_line, split_line)
+
     if len(split_line) < 2:
         return None
     if '!' in orig_upper_split[0]:
@@ -899,7 +783,6 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         if len(original_line):
             actions.sc_send(client_socket, original_line)
         return None
-    ial_send = await ss_updateial(client_socket, server_socket, single_line, split_line)
     if split_line[1] == 'ping' and len(split_line) >= 3:
         pong: str = str.strip(split_line[2].lstrip(':') + ' ' + ' '.join(split_line[3:]))
         actions.sc_send(server_socket, 'PONG :' + pong)
@@ -965,64 +848,64 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     actions.sc_send(client_socket, original_line)
     return None
 
-away_count = {}
-
-def dur_replace(in_words: str) -> str:
-    """Shorten the time duration text
-
-    @param in_words: The words of the time duration string
-    @return: string
+async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
+                            server_socket: trio.SocketStream | trio.SSLStream) -> None:
     """
-    in_words = in_words.replace('week', 'wks')
-    in_words = in_words.replace('day', 'dys')
-    in_words = in_words.replace('hour', 'hrs')
-    in_words = in_words.replace('minute', 'mins')
-    in_words = in_words.replace('second', 'secs')
-    in_words = in_words.replace('ss', 's')
-    return in_words
-
-
-def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) -> None:
-    """The replaced MOTD sent to the irc-client upon connecting
-
+    Receive a chunk of data and call cs_received_line() when atleast one line has completed
     @param client_socket: the socket to the irc-client
-    @param mynick: the string of irc-client nickname to send the MOTD to
-    @return: None
+    @param server_socket: the socket to the irc-server
+    @return: None.
 
     """
-    prefix = ':ashburry.pythonanywhere.com 375 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + 'Ashburry.PythonAnywhere.com Message of the Day -')
-    prefix = ':ashburry.pythonanywhere.com 372 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + '\x02skipping MOTD\x02, for an quick connection '
-                                             'startup. -')
-    actions.sc_send(client_socket, prefix)
-    actions.sc_send(client_socket, prefix + 'To connect to an SSL port, '
-                                             '\x02DO NOT\x02 prefix the port with -')
-    actions.sc_send(client_socket, prefix + 'an \x02+\x02 character. End-to-end encryption'
-                                             ' is not possible, -')
-    actions.sc_send(client_socket, prefix + 'AFAIK. Trio-ircproxy.py \x02will\x02 use SSL for '
-                                             'irc -')
-    actions.sc_send(client_socket, prefix + 'server connections on specific ports. -')
-    actions.sc_send(client_socket, prefix)
-    actions.sc_send(client_socket, prefix + 'Type \x02/proxy-commands\x02 for list of valid '
-                                             'commands. -')
-    actions.sc_send(client_socket, prefix + 'Type \x02/xdcc-commands\x02 for list of xdcc '
-                                             'commands. -')
-    actions.sc_send(client_socket, prefix + "Type \x02/proxy-help\x02 for first use "
-                                             "instructions. -")
-    actions.sc_send(client_socket, prefix)
-    actions.sc_send(client_socket, prefix + "To view the irc server's MOTD type "
-                                             "\x02/motd\x02 -")
-    actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Bauderr mSL script and"
-                                             " official website: -")
-    actions.sc_send(client_socket, prefix + "\x1fhttps://ashburry.pythonanywhere.com/\x1f -")
-    actions.sc_send(client_socket, prefix)
-    prefix = ':ashburry.pythonanywhere.com 376 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + 'End of /MOTD -')
-    return None
-
-
-time_last_pong: float = 0.0
+    bytes_cap: int = 0
+    byte_string: str = ''
+    max_RECV: int = 355350000
+    bytes_data: bytes = b''
+    while True:
+        if len(bytes_data) == max_RECV:
+            await trio.sleep(1)
+        bytes_data = b''
+        if not is_socket(client_socket) or not is_socket(server_socket):
+            return None
+        closed: bool = False
+        try:
+            bytes_data = await client_socket.receive_some(max_RECV)
+        except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError):
+            closed = True
+        if not bytes_data:
+            if closed is False:
+                print("trio-ircproxy: client closed the socket.")
+            elif closed:
+                print('trio-ircproxy: socket to client crashed.')
+            if client_socket in socket_data.mysockets:
+                await actions.send_quit(client_socket)
+            return None
+        bytes_cap += len(bytes_data)
+        if ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
+            socket_data.dcc_send[server_socket]) or \
+                ("mynick" in socket_data.dcc_chat[client_socket] and "othernick" in
+                 socket_data.dcc_chat[server_socket]):
+            actions.sc_send(server_socket, bytes_data)
+            continue
+        byte_string += usable_decode(bytes_data)
+        byte_string: str = byte_string.replace('\r', '\n')
+        while '\n\n' in byte_string:
+            byte_string = byte_string.replace('\n\n', '\n')
+        byte_string: str = byte_string.lstrip('\n')
+        find_n: int = byte_string.find('\n')
+        single_line: str
+        while find_n > -1:
+            byte_string: str = byte_string.lstrip('\n')
+            single_line: str = byte_string[0:find_n + 1]
+            strip_line: str = lower_strip(single_line)
+            split_line: list[str] = strip_line.split(' ')
+            cs_received_line(client_socket, server_socket, single_line, split_line)
+            try:
+                byte_string = byte_string[find_n + 1:]
+            except IndexError:
+                byte_string = ''
+                break
+            find_n = byte_string.find('\n')
 
 
 def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
@@ -1102,6 +985,106 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     if not halt_on_yes:
         actions.sc_send(server_socket, original_line)
     return None
+
+
+def sock_005(client_socket: trio.SocketStream | trio.SSLStream, single_line: str) -> None:
+    """Parses the 005 numeric from the irc-server
+
+    :@param client_socket: the socket to the irc-client
+    :@param single_line: a single line of text read from a socket
+    :@return: None
+    """
+    upper_line_str: str = single_line.strip()
+    upper_line: list[str] = upper_line_str.split(' ')
+    if upper_line_str[0] == ':':
+        upper_line = upper_line[3:]
+    else:
+        upper_line = upper_line[2:]
+    key: str
+    value: str | int
+    if not upper_line:
+        return None
+    for name in upper_line:
+        if name[0] == ":":
+            break
+        if "=" in name:
+            key = name.split("=")[0]
+            value = name.split("=")[1]
+        else:
+            key = name
+            value = name
+        if value.isdigit():
+            value = int(value)
+        key = key.lower()
+        socket_data.raw_005[client_socket][key] = value
+    socket_data.set_face_nicknet(client_socket)
+    return None
+
+
+async def exploit_triggered(cs, ss):
+    print("mIRC exploit attempt from irc server.")
+    await aclose_sockets(sockets=(cs, ss))
+
+
+away_count = {}
+
+def dur_replace(in_words: str) -> str:
+    """Shorten the time duration text
+
+    @param in_words: The words of the time duration string
+    @return: string
+    """
+    in_words = in_words.replace('week', 'wks')
+    in_words = in_words.replace('day', 'dys')
+    in_words = in_words.replace('hour', 'hrs')
+    in_words = in_words.replace('minute', 'mins')
+    in_words = in_words.replace('second', 'secs')
+    in_words = in_words.replace('ss', 's')
+    return in_words
+
+
+def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) -> None:
+    """The replaced MOTD sent to the irc-client upon connecting
+
+    @param client_socket: the socket to the irc-client
+    @param mynick: the string of irc-client nickname to send the MOTD to
+    @return: None
+
+    """
+    prefix = ':ashburry.pythonanywhere.com 375 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + 'Ashburry.PythonAnywhere.com Message of the Day -')
+    prefix = ':ashburry.pythonanywhere.com 372 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + '\x02skipping MOTD\x02, for an quick connection '
+                                             'startup. -')
+    actions.sc_send(client_socket, prefix)
+    actions.sc_send(client_socket, prefix + 'To connect to an SSL port, '
+                                             '\x02DO NOT\x02 prefix the port with -')
+    actions.sc_send(client_socket, prefix + 'an \x02+\x02 character. End-to-end encryption'
+                                             ' is not possible, -')
+    actions.sc_send(client_socket, prefix + 'AFAIK. Trio-ircproxy.py \x02will\x02 use SSL for '
+                                             'irc -')
+    actions.sc_send(client_socket, prefix + 'server connections on specific ports. -')
+    actions.sc_send(client_socket, prefix)
+    actions.sc_send(client_socket, prefix + 'Type \x02/proxy-commands\x02 for list of valid '
+                                             'commands. -')
+    actions.sc_send(client_socket, prefix + 'Type \x02/xdcc-commands\x02 for list of xdcc '
+                                             'commands. -')
+    actions.sc_send(client_socket, prefix + "Type \x02/proxy-help\x02 for first use "
+                                             "instructions. -")
+    actions.sc_send(client_socket, prefix)
+    actions.sc_send(client_socket, prefix + "To view the irc server's MOTD type "
+                                             "\x02/motd\x02 -")
+    actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Bauderr mSL script and"
+                                             " official website: -")
+    actions.sc_send(client_socket, prefix + "\x1fhttps://ashburry.pythonanywhere.com/\x1f -")
+    actions.sc_send(client_socket, prefix)
+    prefix = ':ashburry.pythonanywhere.com 376 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + 'End of /MOTD -')
+    return None
+
+
+time_last_pong: float = 0.0
+
 
 def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
                     server_socket: trio.SocketStream | trio.SSLStream,
@@ -1299,7 +1282,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     while True:
         try:
             bytes_data: bytes
-            with trio.move_on_after(60) as cancel_scope:
+            with trio.move_on_after(35) as cancel_scope:
                 bytes_data: bytes = await cs_before_connect.receive_some(1)
             if cancel_scope.cancelled_caught:
                 # proxy_server_handler
@@ -1342,7 +1325,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if auth is False:
             return None
-        print("\n-----------------------\n")
+        print("-----------------------\n")
         print(f'AUTH={str(auth)}')
         socket_data.login[cs_before_connect] = auth[0]
         # username and password login
@@ -1360,8 +1343,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         print("handler EXCEPT 2: " + str(exc.args))
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
-        #return
-        raise
+        return
         # proxy_server_handler
 
 
@@ -1383,9 +1365,6 @@ async def start_proxy_listener():
             nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(listen_port))
             # ctx = create_default_context(purpose=Purpose.SERVER_AUTH)
             ctx = create_default_context(purpose=Purpose.CLIENT_AUTH)
-            await trio.serve_ssl_over_tcp(bounce_server.bounce_server_listen,
-                4322, ctx, host=None, https_compatible=False, backlog=None,
-                    handler_nursery=nursery, task_status=trio.TASK_STATUS_IGNORED)
     except (Exception, KeyboardInterrupt, OSError, gaierror) as exc:
         if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):
             print(
@@ -1397,11 +1376,11 @@ async def start_proxy_listener():
             await quit_all()
         print("EXC: " + str(exc.args))
         print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
-        try:
-            sys.exit(13)
-        except SystemExit:
-            os._exit(130)
-        #raise
+        #try:
+        #    sys.exit(13)
+        #except SystemExit:
+        #    os._exit(130)
+        raise
 
 async def quit_all() -> None:
     """send quitmsg and close all sockets.

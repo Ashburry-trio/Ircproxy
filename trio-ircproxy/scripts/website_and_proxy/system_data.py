@@ -61,7 +61,8 @@ class SystemData:
 
     FryServer_json: ConfigParser = ConfigParser()
     Settings_ini: ConfigParser = ConfigParser()
-    user_settings: dict[dict[str, set[trio.SocketStream | trio.SSLStream]]] = {}
+    user_settings: dict[[str, dict[str,set[str]]]] = {}
+    #  system_data.user_settings['by_username'][auth[0]]
 
     Nick_History_json: Dict[str, Dict[str, str]] = dict()
     Nick_History_json['nicknames'] = {}

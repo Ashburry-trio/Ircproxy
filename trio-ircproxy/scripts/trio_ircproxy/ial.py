@@ -142,6 +142,7 @@ class IALData:
             chan: chan to remove
         """
         cls.make_ial(client_socket)
+        print(f'timers: {cls.timers}')
         try:
             removed = []
             for nick in cls.myial_chan[client_socket]:
@@ -152,6 +153,7 @@ class IALData:
                 del cls.myial_chan[client_socket][nick]
                 del cls.myial[client_socket][nick]
             del cls.myial_count[client_socket][chan]
+            # Remove the Timer
         except KeyError:
             # This should not happen
             pass

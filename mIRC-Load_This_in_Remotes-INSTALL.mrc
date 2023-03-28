@@ -29,6 +29,6 @@ alias baud_load_all {
 alias -l mg_set_app {
   if (adiirc isin $mircexe) { set %mg_app Adiirc }
   if (mirc isin $mircexe) { set %mg_app mIRC }
-  if ($version == 4.2) { set %mg_app Adiirc }
+  if ($version < 5.5) { set %mg_app Adiirc }
   if ($version > 7.0) { set %mg_app mIRC }
 }
