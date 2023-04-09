@@ -191,7 +191,7 @@ class SystemData:
             return None
         cls.Settings_ini.read(cls.settingsfile_path)
         try:
-            cls.Settings_ini['settings']['public_ip'] = get_public_ip()
+            cls.Settings_ini['settings']['public_ip'] = str(get_public_ip())
         except (UnicodeError, UnicodeWarning, UnicodeDecodeError, UnicodeEncodeError,
                 UnicodeTranslateError):
             cls.Settings_ini['settings']['public_ip'] = 'unknown'

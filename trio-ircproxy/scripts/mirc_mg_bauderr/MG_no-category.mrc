@@ -44,10 +44,14 @@ on *:exit: {
   unset %bde_*allow*
 }
 alias eecho {
-  echo -s 54,93Bauderr : $$1-
+  var %msg
+  if ($1 == -sep) { %msg = $2- | linesep -s }
+  else { %msg = $1- }
+  echo -s 54,93Bauderr : %msg
   if ($active == Status Window) { return }
   if (@* iswm $active) { return }
-  echo -a 54,93Bauderr : $$1-
+  linesep -a
+  echo -a 54,93Bauderr : %msg
 }
 alias strip-space { 
   ; set to a variable to strip $crlf

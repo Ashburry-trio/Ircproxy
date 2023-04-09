@@ -1,7 +1,6 @@
 *\.idea\*
 *.chm
-*\deploy\*
-
+*deploy*
 *.pem
 *.key
 

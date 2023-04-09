@@ -14,27 +14,28 @@ alias exp_topics {
   goto loop
 }
 on *:topic:#: {
-  var %topic = $strip($1-)
-  if (%topic == $null) { return }
   topic_history_add $chan $1-
 }
 raw 332:*: {
-  if ($strip($3) == $null) { return }
   topic_history_add $2 $3-
-
 }
 alias topic_history_remove {
   if (!$1) { return }
   unset $varname_global(topic_history_ $+ $1,*)
 }
 alias topic_history_add {
+  exp_topics
+  if ($varname_global(topic-history-off,blank).value) { return }
   var %chan = $1
-  if (!$strip(%chan)) || (!$strip($2-)) { return }
+  if ($len($strip(%chan)) < 2) || ($left(%chan,1) != $chr(35)) { return }
+  var %topic = $strip($2-)
+  %topic_32 = $remove(%topic,$chr(32))
+  if (%topic_32 == $null) { return }
   var %i = 0
   var %check = $varname_global(topic_history_ $+ %chan,*)
   var %varname
   :loop
-  if (%i > 15) { return }
+  if (%i >= 15) { return }
   inc %i
   %varname = $var($eval(%check,1),%i)
   if (!%varname) { goto end }
@@ -42,7 +43,6 @@ alias topic_history_add {
   goto loop
   :end
   set $varname_global(topic_history_ $+ %chan,$ctime) $2-
-
 }
 alias topic_history_popup {
   if ($1 == begin) { return }

@@ -7,6 +7,11 @@ alias no_script_file {
 on *:start: {
   unset %bde_temp*
 }
+raw 18:*: {
+  if ($1- == :motd.mslscript.com motd.mslscript.com online) {
+    set $varname_cid(trio-ircproxy,in_use) = $true
+  }
+}
 on *:quit: {
   if ($nick == $me) { 
     unset $varname_cid(trio-ircproxy.py, active)
@@ -21,10 +26,10 @@ alias onotice-script {
   /onotice %room %msg
 }
 alias omsg-script {
-  var %room = #$$input(Enter a room name to send op-message to:,eygbqk60m,enter a room name to send op-message to,select a room,$chan(1),$chan(2),$chan(3),$chan(4),$chan(5),$chan(6),$chan(7),$chan(8),$chan(9),$chan(10))
+  var %room = #$$input(Enter a room name to send op-notice to:,eygbqk60m,enter a room name to send op-notice to,select a room,$chan(1),$chan(2),$chan(3),$chan(4),$chan(5),$chan(6),$chan(7),$chan(8),$chan(9),$chan(10))
   if (%room == #select a room) { return }
   %room = $gettok(%room,1,32)
-  var %msg = $$input(Speak your message to all chan-ops in %room $+ :,eygbqk60,Speak your message to all chan-ops in %room,:: : MG script : .)
+  var %msg = $$input(Enter your message to all chan-ops in %room $+ :,eygbqk60,Enter your message to all chan-ops in %room,:: : MG script : .)
   /onotice %room %msg
 }
 
@@ -150,8 +155,12 @@ menu Status,Channel {
   .topi&c history
   ..$submenu($topic_history_popup($1))
   ..-
-  ..$iif(($eval($var($varname_global(topic_history_ $+ $chan,*),1),1) == $null || (!$chan)),$style(3)) erase topic history for channel : unset $varname_global(topic_history_ $+ $chan,*) | eecho Topic history cleared for room $chan
-  ..$iif(($eval($var($varname_global(topic_history_*,*),1),1) == $null),$style(3)) erase entire topic history : unset $varname_global(topic_history_*,*) | eecho Topic history for ALL channels is cleared
+  ..$iif(($eval($var($varname_global(topic_history_ $+ $chan,*),1),1) == $null || (!$chan)),$style(3)) erase topic history for channel : unset $varname_global(topic_history_ $+ $chan,*) | eecho -sep topic history cleared for room $chan
+  ..$iif(($eval($var($varname_global(topic_history_*,*),1),1) == $null),$style(3)) erase entire topic history : unset $varname_global(topic_history_*,*) | eecho -sep topic history for ALL channels is cleared
+  ..-
+  ..$iff((!$chan),$style(2)) add this topic to history : topic_history_add $chan $chan($chan).topic
+  ..-
+  ..$iif(($varname_global(topic-history-off,blank).value == $true),$style(1)) turn OFF topic history : set $varname_global(topic-history-off,blank) $iif(($varname_global(topic-history-off,blank).value == $true),$false,$true)
   .-
   .[&allow prevention]
   ..$style_allow_ascii &allow ascii-art
@@ -221,39 +230,22 @@ menu Status,Channel {
   ..$style_proxy &server's name $block($varname_glob(admin-server-name,none).value) : /bnc_msg set-name $$?="enter your server's name (letters only):"
   ..$style_proxy &admin nickname $block($varname_glob(admin-nick,none).value) : /bnc_msg set-admin $$?="enter your contact nickname:"
   ..$style_proxy &admin email $block($varname_glob(admin-smtp-email,none).value) : /bnc_msg set-email $$?="enter your system email:"
-  ..$style_proxy &smtp hostname $block($varname_glob(admin-smtp-hostname,none).value) : /bnc_msg set-smtp $$?="enter your smtp server hostname:"
-  ..$style_proxy &smtp username $block($varname_glob(admin-smtp-user,none).value) : /bnc_msg set-username $$?="enter your smtp server username:"
-  ..$style_proxy &smtp password : /.bnc_msg set-password $$?="enter your smtp server password:"
+  ..$style_proxy &mslscript.com username $block($varname_glob(admin-smtp-user,none).value) : /bnc_msg set-username $$?="enter your smtp server username:"
+  ..$style_proxy &mslscript.com password : /.bnc_msg set-password $$?="enter your old www.mslscript.com password:" $$?="enter your new server password:"
   ..-
   ..in&fo : /script_info -identity
   .-
 
   ; Keep track of the IP and PORT in use so you know where to send the shutdown command to
   .&start and stop
-  ..&start web-server : /run $varname_glob(python,none).value $scriptdir..\www\flask_app.py
   ..&start trio-ircproxy.py : /run $varname_glob(python,none).value $scriptdir..\..\trio-ircproxy.py
   ..-
-  ..&shutdown web-server : /run http://127.0.0.1/admin/shutdown/
   ..$style-proxy-shutdown &shutdown trio-ircproxy.py : /proxy-shutdown
   .command line
-  ..$iif(($varname_global(python-pop,none).value == python3),$style(3)) py&thon3 : set $varname_glob(python,none) python3 | set $varname_global(python-pop,none) python3 | set $varname_global(python-custom,none) $false
-  ..$iif(($varname_global(python-pop,none).value == python),$style(3)) py&thon : set $varname_glob(python,none) python | set $varname_global(python-pop,none) python | set $varname_global(python-custom,none) $false
-  ..$iif(($varname_global(python-pop,none).value == py-3.10),$style(3)) [p&y -3.10] : set $varname_glob(python,none) py -3.10 | set $varname_global(python-pop,none) py-3.10 | set $varname_global(python-custom,none) $false
+  ..run proxy : run $scriptdir..\..\..\runproxy.bat | eecho if there is an error the cmd.exe window will close automatically.
   ..-
-  ..$custom-py-pop &custom
-  ...select : {
-    var %tmp = $sfile($sysdir(profile) $+ AppData\Local\Programs\Python\Python*.exe,Select your Python 3.7 to 3.10 interpreter,Select) 
-    if (!$sfstate) && ($exists(%tmp)) {
-      set $varname_global(python-pop,none) custom
-      set $varname_global(python,none) %tmp
-      set $varname_global(python-pop,custom-path) %tmp
-    }
-  }
-  ...$style(2) $iif(($right($varname_global(python-pop,custom-path).value,32)),$ifmatch) : noop
-  ...-
-  ...$iif(($varname_global(python-pop,none).value == custom),$style(1)) use &custom interpreter : {
-    set $varname_global(python-pop,none) custom
-  }
+  ..$iif(($exists($scriptdir..\..\venv)),$style(2)) &install : run $scriptdir..\..\..\install.bat
+
   .-
   .listen with ip
   ..$iif(($varname_glob(bind-ip).value == private),$style(1)) 127.0.0.1 (private/this computer only) : set $varname_global(bind-ip) private
@@ -262,13 +254,11 @@ menu Status,Channel {
   ..info : script_info -listen
 
   .u&se port numbers
-  ..$style(1) change $block(BNC $varname_glob(use-port,proxy).value,$chr(32) / $chr(32),WWW $varname_glob(use-port,http).value) : {
-    if ($check-www-setup-topic == $false) { return }
-    var %pp = $$?="enter two port numbers; for proxy then http [4321 80]:"
-    set-service-ports %pp
+  ..$style(1) change $block(BNC $varname_glob(use-port,proxy).value) : {
+    var %pp = $$?="enter a port number for your proxy server: [4321]:"
+    set-service-port %pp
   }
-  ..$iif(($varname_glob(use-port,proxy).value == 4321 && $varname_glob(use-port,http).value == 80),$style(3)) [4321 / 80] : { set-service-ports 4321 80 }
-  ..$iif(($varname_glob(use-port,proxy).value == 4321 && $varname_glob(use-port,http).value == 1234),$style(3)) [4321 / 1234] : { set-service-ports 4321 1233 }
+  ..$iif(($varname_glob(use-port,proxy).value == 4321),$style(3)) [4321] : { set-service-port 4321 }
 
   ..-
   ..info : script_info -port
@@ -654,40 +644,14 @@ alias set_allow_room_name {
   if ($varname_global(allow_room_name,$network $+ $1).value == $false) { set $varname_global(allow_room_default,$network $+ $1) $false }
 
 }
-alias -l set-service-ports {
+alias -l set-service-port {
   %pp = $remove($1-,[,])
-  %pp = $strip($replace(%pp,/,$chr(32)))
-  while ($str($chr(32),2) isin %pp) {
-    %pp = $replace(%pp,$str($chr(32),2),$chr(32))
-  }
-  var %p = $gettok(%pp,1,32)
-  if (!%p) { errecho you must supply two port numbers; one for proxy and another for http | return }
-  if (!$isnum(%p)) || (%p < 1) || (%p > 65535) { errecho invalid port number, port must be from 1 to 65535. | return }
-  var %p = $gettok(%pp,2,32)
-  if (!%p) { errecho you must supply two port numbers | return }
-  if (!$isnum(%p)) || (%p < 1) || (%p > 65535) { errecho invalid port number, port must be from 1 to 65535. | return }
-  set $varname_glob(use-port,proxy) $gettok(%pp,1,32)
-  set $varname_glob(use-port,http) $gettok(%pp,2,32)
-  /writeini $scriptdir\..\www\www-server-config.ini %topic web-server-port $gettok(%pp,2,32)
-  eecho restart Trio-IrcProxy.py and the web-server for changes to take affect.
-}
+  %pp = $remove(%pp,$chr(32))
 
-
-alias -l custom-py-pop {
-  if ($varname_global(python-pop,none).value != custom) { return }
-  if (!$exists($varname_global(python-pop,custom-path).value)) { 
-    set $varname_global(python,none) py -3.10
-    set $varname_global(python-pop,none) py-3.10
-    unset $varname_global(python-pop,custom-path)
-    return 
-  }
-  else { return $style(1) }
-}
-alias check-www-setup-topic {
-  var %topic = $readini($scriptdir\..\www\www-server-config.ini,DEFAULT,using-topic-setup)
-  var %topic = $remove(%topic, $chr(32))
-  if (%topic == $null) || (%topic == DEFAULT) { eecho you must select a www-topic-setup first | return $false }
-  return $true
+  if (!$isnum(%p)) || (%p < 1) || (%p > 65535) { errecho invalid port number, port must be from 1 to 65535. | eecho port numbers between 1122 and 5000 are recommended. | return }
+  set $varname_glob(use-port,proxy) %pp
+  /writeini $scriptdir\..\www\www-server-config.ini %topic proxy-port %pp
+  eecho restart Trio-IrcProxy.py for changes to take affect. Also, change your mIRC proxy settings.
 }
 
 alias menu_enable_oper_scan {

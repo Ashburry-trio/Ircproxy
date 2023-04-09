@@ -17,7 +17,7 @@ if not exist "%UserProfile%\appdata\local\clink\" (mkdir "%UserProfile%\appdata\
 if not exist "%UserProfile%\appdata\local\clink\settings" (echo terminate_autoanswer = 1 >> %userProfile%\appdata\local\clink\settings)
 echo Creating virtual environment in folder named "venv" in the trio-ircproxy directory.
 py %1 -m venv .\trio-ircproxy\venv
-call .\trio-ircproxy\venv\Scripts\activate.bat
+call .\activate.bat
 echo Install wheel and pip...
 pip install wheel
 python.exe -m pip install pip
@@ -25,5 +25,7 @@ python.exe -m pip install --upgrade pip
 echo Installing requirments via "pip install -r .\trio-ircproxy\requirements.txt"
 pip install -r .\trio-ircproxy\requirements.txt
 echo.
+echo Running "runproxy.bat" to start the proxy server. User and password is "user : pass" port 4321
+echo Make sure you are connected to the internet when you change your login.
 call runproxy.bat
 :complete
