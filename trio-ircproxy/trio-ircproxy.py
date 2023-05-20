@@ -694,7 +694,7 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             while find_n > -1:
                 single_line = byte_string[0:find_n + 1]
                 if single_line != '\n':
-                    split_line = lower_split(single_line)
+                    split_line = lower_strip(single_line)
                     split_line = split_line.split(' ')
                     await ss_received_line(client_socket, server_socket, single_line, split_line)
                 try:
@@ -707,7 +707,7 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             in_read = False
         # out loop
     except (ValueError, KeyError, Exception, BaseExceptionGroup, trio.BrokenResourceError,
-            trio.ClosedResourceError, trio.BusyResourceError, BaseException, BaseExceptionGroup):
+            trio.ClosedResourceError, trio.BusyResourceError, BaseException):
         print('value, key error, exception')
         raise
     finally:
@@ -878,7 +878,10 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             elif closed:
                 print('trio-ircproxy: socket to client crashed.')
             if client_socket in socket_data.mysockets:
-                await actions.send_quit(client_socket)
+                try:
+                    await actions.send_quit(client_socket)
+                except:
+                    pass
             return None
         bytes_cap += len(bytes_data)
         if ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
@@ -1274,7 +1277,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         await aclose_sockets(sockets=(cs_before_connect,))
         return None
     socket_data.hostname[cs_before_connect] = hostname
-    port: str = system_data.Settings_ini["settings"]["listen_port"]
+    port: str = Settings_ini["settings"]["listen_port"]
     socket_data.echo(cs_before_connect, "Accepted a client connection on port " + port + '...')
     bytes_data: bytes
     byte_string: str = ""
@@ -1352,10 +1355,10 @@ async def start_proxy_listener():
 
     """
     table_cp: ConfigParser = ConfigParser()
-    table_cp.read(path.join(_dir, 'scripts', 'website_and_proxy', 'bnc_settings.ini'))
+    table_cp.read_dict(Settings_ini)
     if table_cp.has_section('settings') is False:
         table_cp.add_section('settings')
-    table_cp.read_dict(Settings_ini)
+
     listen_port: int = int(system_data.Settings_ini["settings"].get("listen_port", 4321))
     print('-+')
     print("proxy is ready, listening on port " + str(listen_port))
@@ -1394,7 +1397,6 @@ def begin_server() -> None:
     """Start the trio_ircproxy.py proxy server
 
     """
-    system_data.make_user_file()
     system_data.make_settings()
     system_data.make_fryfile()
     system_data.make_nickhistory()

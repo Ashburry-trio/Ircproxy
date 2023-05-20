@@ -126,6 +126,10 @@ alias block {
   if (strip($1) == $null) { return }
   return $chr(91) $+ $1- $+ $chr(93)
 }
+alias -l style_net_chan_link {
+  if (!$chan) { return }
+  if ($varname_global(network-link,$chan).value) { return $style(1) }
+}
 menu Status,Channel {
   $chr(46) $chr(58) M&achine Gun $str($chr(58),2) $chr(58)
   .$style_proxy $chr(46) $chr(58) describe mg $str($chr(58),2) $chr(58)
@@ -158,7 +162,7 @@ menu Status,Channel {
   ..$iif(($eval($var($varname_global(topic_history_ $+ $chan,*),1),1) == $null || (!$chan)),$style(3)) erase topic history for channel : unset $varname_global(topic_history_ $+ $chan,*) | eecho -sep topic history cleared for room $chan
   ..$iif(($eval($var($varname_global(topic_history_*,*),1),1) == $null),$style(3)) erase entire topic history : unset $varname_global(topic_history_*,*) | eecho -sep topic history for ALL channels is cleared
   ..-
-  ..$iff((!$chan),$style(2)) add this topic to history : topic_history_add $chan $chan($chan).topic
+  ..$iif((!$chan),$style(2)) add this topic to history : topic_history_add $chan $chan($chan).topic
   ..-
   ..$iif(($varname_global(topic-history-off,blank).value == $true),$style(1)) turn OFF topic history : set $varname_global(topic-history-off,blank) $iif(($varname_global(topic-history-off,blank).value == $true),$false,$true)
   .-
@@ -223,6 +227,14 @@ menu Status,Channel {
   ...$oper_scan_cid_chan switch ON for this channel/connection id (temporaryp) : toggle_oper_scan_cid_chan
   ...$oper_scan_net_chan [switch ON for this channel/network] : toggle_oper_scan_net_chan
   ...$oper_scan_client [switch ON for this irc-client] : toggle_oper_scan_client
+  .$style_net_chan_link network channel link 
+  ..$style($iif(($varname_global(network-link,$chan).value),1,0)) turn on here : {
+    if ($varname_global(network-link,$chan).value > 0) { set $varname_global(network-link,$chan) 0 | status_msg set channel-link $chan off }
+    else { set $varname_global(network-link,$chan) $cid | status_msg set channel-link $chan $cid }
+  }
+  ..-
+  ..in&fo : /script_info -chan_link
+  .-
   .$style_auto_ial [&auto update ial] : toggle_auto_ial
 
   &trio-ircproxy.py
@@ -244,7 +256,7 @@ menu Status,Channel {
   .command line
   ..run proxy : run $scriptdir..\..\..\runproxy.bat | eecho if there is an error the cmd.exe window will close automatically.
   ..-
-  ..$iif(($exists($scriptdir..\..\venv)),$style(2)) &install : run $scriptdir..\..\..\install.bat
+  ..$iif(($exists($scriptdir..\..\venv)),$style(3)) &install : run $qt($scriptdir..\..\..\install.bat)
 
   .-
   .listen with ip
@@ -844,6 +856,9 @@ alias bnc_msg {
   if ($strip($1) == $null) { return }
   if ($silence) { .msg $varname_glob(status-nick,none).value $1- }
   else { msg $varname_glob(status-nick,none).value $1- }
+}
+alias status_msg {
+  bnc_msg $1-
 }
 alias errecho {
   if ($active == Status Window) { echo -a 4Error: $1- }

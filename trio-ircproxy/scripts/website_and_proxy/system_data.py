@@ -1,28 +1,27 @@
-#!/usr/bin/python
+ #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
 
-from pathlib import Path
-from os.path import realpath
+# from pathlib import Path
+# from os.path import realpath
 # from os.path import dirname
 from os.path import isfile
 from os.path import isdir
 from os import mkdir
-from typing import List, Dict, Set
-from hashlib import md5, sha256
+from typing import List, Dict
+from hashlib import sha256
 from pathlib import Path
 from configparser import ConfigParser
 from pif import get_public_ip
-import trio
 import platformdirs as appdirs
-import os
 import json
 from os import makedirs
 import os
 import sys
 
 _dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _dir)
 
 user_file = Path(os.path.join(_dir, "users.dat"))
 sysdir_path = os.path.join(appdirs.user_config_path(), "trio_ircproxy-11.01.15")
@@ -252,8 +251,13 @@ class SystemData:
         return None
 
     @classmethod
-    def make_user_file(cls) -> None:
-        newlogin = 'user:email@no-host.com:admin:' + sha256(b'pass').hexdigest() + '\n'
+    def make_user_file(cls,user,email,status,token) -> None:
+        newlogin = user + ':' + email + ":" + status
+        from cryptography.fernet import Fernet
+        sumk = Fernet.generate_key()
+        A = Fernet(sumk)
+        token = A.encrypt(b'')
+
         do_write = False
         if user_file.is_file():
             with open(user_file, 'r') as sfopen:
