@@ -4,18 +4,18 @@
 """Copyright (c) 2022, sire master gi Kenggi Peters phd. ret.
 
 This is an async IRC proxy server. It augments the irc
-clients server connection adding functionality. It also allows
-communicating to the pythonanywhere.com website server (eventually).
+clients server connection; adding functionality. It also allows
+communicating to the pythonanywhere.com website server (eventually) at www.mslscript.com.
 The proxy itself is interfaced by an irc client by using your 127.0.0.1 ip
 for proxy server hostname/ip with the port number 4321 and default
-login ussername/password is "user : pass"
+login username/password is "user : pass"
 in your irc client. for help type "/raw proxy-help" or maybe
 "/quote proxy-help" or just "/proxy-help" with your irc client
 after connecting to any irc server through the proxy server.
 
 Read the readme.md file and get help in #5ioE on Undernet.
 This is a pre-alpha (work in progress), don't expect it to
-function properly however, it will
+function properly, however it will
 (not)function safely at best.
 
 You may use this with a znc (bounce) service however your
@@ -23,25 +23,24 @@ proxy server functionaltiy will only work while a client is connected
 through the proxy server.
 You must run; in the terminal:
     'cd Documents"
-    "unzip -d trio-ircproxy-main.zip .
+    "unzip -d trio-ircproxy-main.zip .  (<- Notice the dot at the end)
     "cd trio-ircproxy-main"
 
 Windows:
-    "install.bat -3.11"  -+-+- (just once, forever)
+    "install.bat -3.11"  -+-+- (just once, forever. USe your hihgest installed python version)
     "runproxy.bat"
         or
-    "activate.bat"
-    python.exe trio-ircproxy\trio-ircproxy.py
+    "runproxy.bat"
 
 
 use the install.bat -3.11 if you are on windows with Python 3.11. It just sets up venv and
  installs pip, upgrades pip, and installs requirements.txt.
- You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat and
-  python.exe trio-ircproxy\trio-ircproxy.py
-
+ You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat and then
+  "python.exe trio-ircproxy\trio-ircproxy.py"
 
 
 Linux:
+    cd trio-ircproxy-main
     python3.11 -m venv ./trio-ircproxy/venv
     source ./trio-ircproxy/venv/bin/activate
     pip3 install -r ./trio-ircproxy/requirements.txt
@@ -51,7 +50,7 @@ Linux:
     source ./trio-ircproxy/venv/bin/activate
     python ./trio-ircproxy/trio-ircproxy.py
 
-I need to create an install script for Linux and the runproxy for Linux
+I need to create an install script for Linux and the runproxy.bat for Linux
 """
 
 from __future__ import annotations
@@ -158,8 +157,15 @@ def check_mirc_exploit(proto) -> bool:
             :@return: True if there is binary data and False if it is clean.
 
     """
+    proto: str = str(proto)
+    proto = proto.strip(':')
+    proto = proto.lower()
+    proto_split: list[str] = proto.split(' ')
+    nick: bool = False
+    if proto_split[1] == 'nick' or proto_split[0] == 'nick':
+        nick = True
     for let in str(proto):
-        if ord(let) == 58:
+        if ord(let) == 58 and nick is False:
             return False
         if ord(let) in (1, 3, 31, 2, 22, 15, 31, 42):
             continue
