@@ -246,4 +246,6 @@ class SocketData:
             if client_socket in system_data.user_settings[uname]:
                 system_data.user_settings[uname].remove(client_socket)
                 break
+            if client_socket in system_data.user_name:
+                del system_data.user_name[client_socket]
         return None

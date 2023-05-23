@@ -227,14 +227,19 @@ menu Status,Channel {
   ...$oper_scan_cid_chan switch ON for this channel/connection id (temporaryp) : toggle_oper_scan_cid_chan
   ...$oper_scan_net_chan [switch ON for this channel/network] : toggle_oper_scan_net_chan
   ...$oper_scan_client [switch ON for this irc-client] : toggle_oper_scan_client
+
   .$style_net_chan_link network channel link 
-  ..$style($iif(($varname_global(network-link,$chan).value),1,0)) turn on here : {
+  ..$style_link_on turn on here : {
     if ($varname_global(network-link,$chan).value > 0) { set $varname_global(network-link,$chan) 0 | status_msg set channel-link $chan off }
     else { set $varname_global(network-link,$chan) $cid | status_msg set channel-link $chan $cid }
   }
   ..-
   ..in&fo : /script_info -chan_link
+  .$style_annc_urls announce urls : annc_urls_toggle
+  ..-
+  ..info : script_info -urls
   .-
+
   .$style_auto_ial [&auto update ial] : toggle_auto_ial
 
   &trio-ircproxy.py
@@ -289,9 +294,14 @@ menu Status,Channel {
   ; command history
   ;.xcdcc send #899 : /msg [MG]-MISC|EU|S|RandomPunk xdcc send #899
 }
+alias -l style_link_on {
+  if (!$chan) { return $style(2) }
+  if ($varname_global(network-link,$chan).value == 1) { return $style(1) }
+
+}
 alias -l BAUDERR-ADVERTISE {
   if ($1 == --chan) {
-    describe $$2 is using Machine Gun mSL script named Bauderr. use ctcp version/script/source for more info.
+    describe $$2 is using Machine Gun mSL script named Bauderr. use ctcp version / script / source for more info.
   }
 }
 alias style_auto_ial {
@@ -300,6 +310,13 @@ alias style_auto_ial {
 alias toggle_auto_ial {
   set $varname_global(auto_ia1,blank) $iif($1 != $null,$1,$iif(($varname_global(auto_ia1,blank).value == $true || $varname_global(auto_ia1,blank).value == $null),$false,$true))
 }
+alias -l style_annc_urls {
+  return $iif(($varname_cid(annc_urls,blank).value),$style(1))
+}
+alias -l annc_urls_toggle {
+  set $varname_cid(annc_urls,blank) $iif(($varname_cid(annc_urls,blank).value),$false,$true)
+}
+
 alias play-sound-history {
   if ($1 isin begin end) { return asdf }
   if ($1 == 16) { return }

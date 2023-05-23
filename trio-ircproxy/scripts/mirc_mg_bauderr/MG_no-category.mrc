@@ -27,10 +27,11 @@ on *:part:#: {
   if ($nick == $me) { .timerallow $+ $$network $+ $chan 1 10 /unset %bde_*allow* $+ $$network $+ $chan $+ * }
 }
 on *:kick:#: {
-  if ($knick == $me) { .timerallow $+ $$network $+ $chan 1 10 /unset %bde_*allow* $+ $$network $+ $chan $+ * }
+  if ($knick == $me) { .timerallow $+ $cid $+ $chan 1 10 /unset %bde_*allow* [ $+ [ $$network $+ $chan $+ * ] ] }
 }
 on *:join:#: {
-  if ($nick == $me) { .timerallow $+ $$network $+ $chan off }
+  if ($nick == $me) { .timerallow $+ $cid $+ $chan off | return }
+  status_msg get chan_allow $chan
 }
 alias qw {
   var %text = $1

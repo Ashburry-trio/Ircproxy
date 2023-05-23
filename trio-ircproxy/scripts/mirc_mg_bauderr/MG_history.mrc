@@ -8,7 +8,7 @@ alias exp_topics {
   var %i = 0
   :loop
   inc %i
-  %check2 = $var($eval(%check,1),%i)
+  set -ln %check2 $var($eval(%check,1),%i)
   if (%check2 == $null) { return }
   if ($calc($ctime - $gettok(%check2,-1,35)) > $calc(60 * 60 * 24 * 14)) { unset $eval(%check2,1) | dec %i }
   goto loop
@@ -26,10 +26,10 @@ alias topic_history_remove {
 alias topic_history_add {
   exp_topics
   if ($varname_global(topic-history-off,blank).value) { return }
-  var %chan = $1
-  if ($len($strip(%chan)) < 2) || ($left(%chan,1) != $chr(35)) { return }
-  var %topic = $strip($2-)
-  %topic_32 = $remove(%topic,$chr(32))
+  var %chan = $strip($1)
+  if ($len(%chan) < 2) || ($left(%chan,1) != $chr(35)) { return }
+  set -ln %topic $strip($2-)
+  set -ln %topic_32 $remove(%topic,$chr(32))
   if (%topic_32 == $null) { return }
   var %i = 0
   var %check = $varname_global(topic_history_ $+ %chan,*)
@@ -42,7 +42,7 @@ alias topic_history_add {
   if ([ [ %varname ] ] === $2-) { return }
   goto loop
   :end
-  set $varname_global(topic_history_ $+ %chan,$ctime) $2-
+  set -n $varname_global(topic_history_ $+ %chan,$ctime) $2-
 }
 alias topic_history_popup {
   if ($1 == begin) { return }

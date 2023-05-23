@@ -20,7 +20,7 @@
 %bde_glob_python-pop#custom-path C:\Users\USER\AppData\Local\Programs\Python\Python310\python.exe
 %bde_glob_bad_script_warn#UnderNet#ircdhelp $false
 %bde_glob_oper-scan-net-chan#UnderNet#ircdhelp $false
-%bde_glob_client-id#blank 36920222
+%bde_glob_client-id#blank 72816311
 %bde_glob_bad_script_warn#UnderNet#5ioE $false
 %bde_glob_oper-scan-client#blank $false
 %bde_glob_auto_ia1#blank $true
@@ -33,8 +33,8 @@
 %bde_glob_topic-history-off#blank $false
 %a %b
 %b Workingv $me
-%topic_32 FreeproxyCONNECTforyourircclient:https://www.mslscript.com
-%bde_cid_trio-ircproxy.py!active#1 $true
-%bde_glob_allow_bad_script_ban#Libera.Chat#5ioE $true
-%bde_cid_trio-ircproxy.py!active#10747 $true
+%topic_32 .:[BastilleBSD|Latest:0.8.20210115|https://discord.gg/3GSNvsQ52H|https://bastillebsd.org|https://docs.bastillebsd.org|https://twitter.com/BastilleBSD]:.
 %bde_glob_network-link#blank 1
+%bde_glob_topic_history_#bastillebsd#1684610124 .:[BastilleBSD | Latest: 0.8.20210115 | https://discord.gg/3GSNvsQ52H | https://bastillebsd.org | https://docs.bastillebsd.org | https://twitter.com/BastilleBSD ]:.
+%bde_glob_network-link##5ioE 1
+%var testing
