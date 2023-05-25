@@ -150,6 +150,9 @@ def colourstrip(data: str) -> str:
     data = data.replace("\x1e", "")
     return data
 
+def exploit_triggered(client_socket, server_socket):
+    actions.sc_send('There was a exploit attempt by IRC network.')
+    actions.send_quit(server_socket, client_socket)
 
 def check_mirc_exploit(proto: str) -> bool:
     """Verifies that the nickname portions of the protocol
@@ -999,7 +1002,7 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
     if split_line[1] == 'ping' and len(split_line) >= 3:
         pong_str: str = str.strip(split_line[2].lstrip(':') + ' ' + ' '.join(split_line[3:]))
-        actions.sc_send(client_socket, 'PONG ashburry.pythonanywhere.com :' + pong_str)
+        actions.sc_send(client_socket, 'PONG www.mslscript.com :' + pong_str)
         actions.sc_send(server_socket, 'PING :' + str(time()))
         return None
 
@@ -1046,14 +1049,6 @@ def sock_005(client_socket: trio.SocketStream | trio.SSLStream, single_line: str
     return None
 
 
-async def exploit_triggered(cs, ss):
-    print("mIRC exploit attempt from irc server.")
-    await aclose_sockets(sockets=(cs, ss))
-
-
-away_count = {}
-
-
 def dur_replace(in_words: str) -> str:
     """Shorten the time duration text
 
@@ -1077,17 +1072,17 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     @return: None
 
     """
-    prefix = ':ashburry.pythonanywhere.com 375 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + 'Ashburry.PythonAnywhere.com Message of the Day -')
-    prefix = ':ashburry.pythonanywhere.com 372 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + '\x02skipping MOTD\x02, for an quick connection '
+    prefix = ':www.mslscript.com 375 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + 'www.mslscript.com Message of the Day -')
+    prefix = ':www.mslscript.com 372 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + '\x02skipping MOTD\x02, for a quick connection '
                                             'startup. -')
     actions.sc_send(client_socket, prefix)
     actions.sc_send(client_socket, prefix + 'To connect to an SSL port, '
                                             '\x02DO NOT\x02 prefix the port with -')
     actions.sc_send(client_socket, prefix + 'an \x02+\x02 character. End-to-end encryption'
-                                            ' is not possible, -')
-    actions.sc_send(client_socket, prefix + 'AFAIK. Trio-ircproxy.py \x02will\x02 use SSL for '
+                                            ' is not possible; but SSL from proxy to irc server is. -')
+    actions.sc_send(client_socket, prefix + 'Trio-ircproxy.py \x02will\x02 use SSL for '
                                             'irc -')
     actions.sc_send(client_socket, prefix + 'server connections on specific ports. -')
     actions.sc_send(client_socket, prefix)
@@ -1100,11 +1095,11 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     actions.sc_send(client_socket, prefix)
     actions.sc_send(client_socket, prefix + "To view the irc server's MOTD type "
                                             "\x02/motd\x02 -")
-    actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Bauderr mSL script and"
+    actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Machine-Gun mSL script"
                                             " official website: -")
-    actions.sc_send(client_socket, prefix + "\x1fhttps://ashburry.pythonanywhere.com/\x1f -")
-    actions.sc_send(client_socket, prefix)
-    prefix = ':ashburry.pythonanywhere.com 376 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + "X-Clacks-Overhead:\x02 'GNU Terry Pratchett\x02 -")
+    actions.sc_send(client_socket, prefix + "Server: \x1fhttps://www.mslscript.com/index.html\x1f -")
+    prefix = ':www.mslscript.com 376 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + 'End of /MOTD -')
     return None
 
@@ -1129,7 +1124,7 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
 
     if len(split_line) >= 2 and split_line[0] == '.colour':
         actions.sc_send(client_socket,
-                        ':ashburry!mg-script@trio-ircproxy.com privmsg ashburry :colour is: ' + str(
+                        ':ashburry!mg-script@www.mslscript.com privmsg ashburry :colour is: ' + str(
                             ord(split_line[1][0]))
                         + ' = ' + split_line[1][0])
         # yes_halt = True to NOT send to server

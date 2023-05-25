@@ -69,7 +69,7 @@ def ss_version_reply(nick) -> str:
             "NOTICE "
             + nick
             + f" :\x01VERSION \x02Trio-ircproxy.py\x02 {VERSION_NUM} from "
-            + "\x1fhttps://Ashburry.PythonAnywhere.com\x1f\x01"
+            + "\x1fhttps://www.mslscript.com\x1f\x01"
     )
 
 
@@ -155,12 +155,12 @@ def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> Optional[str
     """The default quit message for the app"""
     if not msg:
         # Send to server
-        msg = "\x02trio-ircproxy.py\x02 from \x1fhttps://ashburry.pythonanywhere.com\x1f"
+        msg = "\x02trio-ircproxy.py\x02 from \x1fhttps://www.mslscript.com\x1f"
     msg = "QUIT :" + msg
     if to:
         # Send to client
         if socket_data.mynick:
-            msg = ':' + socket_data.mynick[to] + "!trio-ircproxy@mg-script.com " + msg
+            msg = ':' + socket_data.mynick[to] + "!trio-ircproxy@www.mslscript.com " + msg
             print(" MY NICK IS : " + socket_data.mynick[to])
         else:
             return ''
@@ -178,7 +178,7 @@ def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> 
     """
     if not client_socket or not msg:
         return None
-    msg = ":status!trio-ircproxy@mg-script.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
+    msg = ":status!trio-ircproxy@www.mslscript.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
     sc_send(client_socket, msg)
     return None
 
@@ -222,6 +222,6 @@ def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, msg: str) 
         :@return: None
 
     """
-    msg = f":*mg-script!trio-ircproxy@mg-script.com NOTICE {nick} :{msg}"
+    msg = f":*mg-script!trio-ircproxy@www.mslscript.com NOTICE {nick} :{msg}"
     circular.sc_send(client_socket, msg)
 
