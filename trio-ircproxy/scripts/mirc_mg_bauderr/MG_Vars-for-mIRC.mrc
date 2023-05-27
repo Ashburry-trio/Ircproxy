@@ -38,3 +38,4 @@
 %bde_glob_topic_history_#bastillebsd#1684610124 .:[BastilleBSD | Latest: 0.8.20210115 | https://discord.gg/3GSNvsQ52H | https://bastillebsd.org | https://docs.bastillebsd.org | https://twitter.com/BastilleBSD ]:.
 %bde_glob_network-link##5ioE 1
 %var testing
+%bde_cid_trio-ircproxy.py!active#1 $true

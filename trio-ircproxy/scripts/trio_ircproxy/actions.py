@@ -40,7 +40,8 @@ async def aclose_sockets(sockets=None) -> None:
             continue
         try:
             await sock.aclose()
-        except (AttributeError, OSError, BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+        except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
+                ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
             pass
 
 
@@ -145,9 +146,17 @@ async def send_quit(sc_socket):
             client_socket = SocketData.mysockets[sc_socket]
         except KeyError:
             return
-    sc_send(other_socket, quitmsg())
-    sc_send(client_socket, quitmsg(to=client_socket))
-    await trio.sleep(0.8)
+    try:
+        sc_send(other_socket, quitmsg())
+    except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
+                ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
+        return
+    try:
+        sc_send(client_socket, quitmsg(to=client_socket))
+    except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
+            ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
+        return
+    await trio.sleep(10)
     await aclose_sockets(sockets=(other_socket, client_socket))
 
 
@@ -210,9 +219,9 @@ def ss_send_notice(server_socket: trio.SocketStream | trio.SSLStream, nick: str,
     if not server_socket or not nick or not msg:
         return None
     msg = f"NOTICE {nick} :{msg}"
-    circular.sc_send(server_socket, msg)
+    sc_send(server_socket, msg)
     return None
-
+1
 
 def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
     """Send a server notice to the irc-client

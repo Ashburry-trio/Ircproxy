@@ -3,7 +3,6 @@
 ; this list at the wherever the "@active = no" line is located.
 
 @active = yes
-
 #5ioE
 #HorribleSubs
 #cservices
@@ -73,5 +72,5 @@
 #books
 ; example of temporary disabling bottom of list
 @active = no
-#yourKiSS
+#firstKiSS
 ; end of list

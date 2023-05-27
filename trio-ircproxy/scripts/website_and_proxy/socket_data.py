@@ -36,24 +36,24 @@ async def aclose_sockets(sockets=None) -> None:
 
 
 class SocketData:
-    current_count: Dict[trio.SocketStream | trio.SSLStream, int]
-    send_buffer: Dict[trio.SocketStream | trio.SSLStream, Deque[str | bytes]] = dict()
-    mynick: Dict[trio.SocketStream | trio.SSLStream, str] = dict()
-    myial: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = dict()
-    myial_chan: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = dict()
-    mychans: Dict[trio.SocketStream | trio.SSLStream, Set[str]] = dict()
-    mysockets: Dict[trio.SocketStream | trio.SSLStream, trio.SocketStream | trio.SSLStream] = dict()
-    raw_005: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int]] = dict()
-    dcc_send: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = dict()
-    dcc_chat: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = dict()
-    dcc_null: Dict[trio.SocketStream | trio.SSLStream, bool | None] = dict()
-    conn_timeout: Dict[trio.SocketStream | trio.SSLStream, int | None] = dict()
-    state: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int | time | Set[str]]] = dict()
-    login: Dict[trio.SocketStream | trio.SSLStream, str | bool] = dict()
-    hostname: Dict[trio.SocketStream | trio.SSLStream, str] = dict()
-    which_socket: Dict[trio.SocketStream | trio.SSLStream, str] = dict()
-    user_power: dict[str, list[trio.SocketStream | trio.SSLStream]] = dict()
-    msg_count_send_buffer: Dict[trio.SocketStream | trio.SSLStream, int]
+    current_count: Dict[trio.SocketStream | trio.SSLStream | None, int | None]
+    send_buffer: Dict[trio.SocketStream | trio.SSLStream | None, Deque[str | bytes | None]] = {}
+    mynick: Dict[trio.SocketStream | trio.SSLStream | None, str | None] = {}
+    myial: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
+    myial_chan: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
+    mychans: Dict[trio.SocketStream | trio.SSLStream | None, Set[str | None]] = {}
+    mysockets: Dict[trio.SocketStream | trio.SSLStream | None, trio.SocketStream | trio.SSLStream | None] = {}
+    raw_005: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | int | None]] = {}
+    dcc_send: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
+    dcc_chat: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
+    dcc_null: Dict[trio.SocketStream | trio.SSLStream | None, bool | None] = {}
+    conn_timeout: Dict[trio.SocketStream | trio.SSLStream | None, int | None] = {}
+    state: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | int | time | Set[str] | None]] = {}
+    login: Dict[trio.SocketStream | trio.SSLStream | None, str | bool | None] = {}
+    hostname: Dict[trio.SocketStream | trio.SSLStream | None, str | None] = {}
+    which_socket: Dict[trio.SocketStream | trio.SSLStream | None, str | None] = {}
+    user_power: dict[None | str, list[trio.SocketStream | trio.SSLStream] | None] | None = {}
+    msg_count_send_buffer: Dict[trio.SocketStream | trio.SSLStream | None, int | None] = {}
     @classmethod
     def create_data(cls, client_socket: trio.SocketStream | trio.SSLStream,
                     server_socket: trio.SocketStream | trio.SSLStream):
@@ -67,8 +67,8 @@ class SocketData:
         cls.conn_timeout[server_socket] = None
         cls.mysockets[client_socket] = server_socket
         cls.mysockets[server_socket] = client_socket
-        cls.dcc_chat[client_socket] = dict()
-        cls.dcc_chat[server_socket] = dict()
+        cls.dcc_chat[client_socket] = {}
+        cls.dcc_chat[server_socket] = {}
         cls.dcc_send[server_socket] = {}
         cls.dcc_send[client_socket] = {}
         cls.dcc_null[client_socket] = True

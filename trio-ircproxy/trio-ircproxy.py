@@ -1376,16 +1376,14 @@ async def start_proxy_listener():
     if Settings_ini.has_section('settings') is False:
         Settings_ini.add_section('settings')
 
-    listen_port: int = int(system_data.Settings_ini["settings"].get("listen_port", 4321))
+    listen_ports: str = system_data.Settings_ini["settings"].get("listen_port", '4321')
     print('-+')
-    print("proxy is ready, listening on port " + str(listen_port))
-    print("press Ctrl+C to quit...\n")
     try:
         async with trio.open_nursery() as nursery:
-            nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(listen_port))
-            nursery.start_soon(trio.serve_tcp, proxy_server_handler, 6697)
-            # ctx = create_default_context(purpose=Purpose.SERVER_AUTH)
-           #  ctx = create_default_context(purpose=Purpose.CLIENT_AUTH)
+            for f in listen_ports.split(' '):
+                nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(f))
+                print("proxy is ready, listening on port " + str(f))
+            print("press Ctrl+C to quit...\n")
     except (EndSession, BaseException, BaseExceptionGroup, Exception, \
             KeyboardInterrupt, OSError, gaierror) as exc:
         if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):
@@ -1401,15 +1399,20 @@ async def start_proxy_listener():
         #    sys.exit(13)
         # except SystemExit:
         #    os._exit(130)
-        raise
+        #raise
 
 
 async def quit_all() -> None:
     """send quitmsg and close all sockets.
 
     """
-    for sock in socket_data.mysockets:
-        await actions.send_quit(sock)
+    sockets = socket_data.mysockets
+    for sock in sockets:
+        try:
+            await actions.send_quit(sock)
+        except (trio.Cancelled, trio.ClosedResourceError, trio.BrokenResourceError,
+                trio.TrioInternalError, Exception, EndSession, ExceptionGroup, BaseExceptionGroup):
+            pass
     return None
 
 

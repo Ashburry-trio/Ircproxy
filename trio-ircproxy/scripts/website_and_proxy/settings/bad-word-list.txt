@@ -1,14 +1,16 @@
 ; below the lines starting with ; are the items of the list
 ; of bad words. @active is a used as a list marker for excluding 
 ; the lower part of the list. The lists are processed in Python for speed.
+
+@active = true
+
 god
 g0d
 damn
 damnit
 damnu
+damnyou
 bastard
-assterd
-ass terd
 whore
 cunt
 faggot
@@ -17,10 +19,9 @@ cock sucker
 suck my cock
 suck a dick
 eat a dick
-cum gobbler
-gobble up my cum
-gobble my cum
+
 @active = false
+
 holybible
 holy bible
 

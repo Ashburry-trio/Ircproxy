@@ -1,0 +1,13 @@
+; Remember to check if the url is marked as adult, or check with google(?)
+; to see if it has adult keywords abd is rated as a adult.
+; ` google ` : maybe google does not have this service but another site does.
+; You can also check if a site is easy to navigate with a cell phone.
+; THe number after the full-colon is the timeout in seconds.
+@check_adult = http:60/header:40(off)
+@check_cellular_compat = (_timeout_:20)/yes:60/no(off)
+
+www.imdb*
+imdb*
+www.y*t*u*be.com
+y*tu*be.com
+
