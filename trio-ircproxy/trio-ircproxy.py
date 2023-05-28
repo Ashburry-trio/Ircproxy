@@ -717,7 +717,7 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             single_line: str
             while find_n > -1:
                 single_line = byte_string[0:find_n + 1]
-                print(single_line)
+                #print(single_line)
                 split_line = lower_strip(single_line)
                 split_line = split_line.split(' ')
                 await ss_received_line(client_socket, server_socket, single_line, split_line)
@@ -730,7 +730,7 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
                 # in Loop
             in_read = False
         # out loop
-    except (ValueError, KeyError, Exception, BaseExceptionGroup, trio.BrokenResourceError,
+    except (trio.Cancelled, ValueError, KeyError, Exception, BaseExceptionGroup, trio.BrokenResourceError,
             trio.ClosedResourceError, trio.BusyResourceError, BaseException):
         print('value, key error, exception')
         raise
@@ -757,13 +757,13 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     # from above ss_received_chunk()
 
     nick_src: str = ''
-    print(single_line)
+    #print(single_line)
     if socket_data.dcc_null[server_socket] == False:
         actions.sc_send(client_socket, single_line)
         return None
     original_line: str = single_line
     orig_upper_split: list[str] = ' '.split(single_line)
-    print('from SS -1: ' + single_line)
+    #print('from SS -1: ' + single_line)
     if check_mirc_exploit(original_line) is True:
         await exploit_triggered(client_socket, server_socket)
         return None
@@ -786,7 +786,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
     if original_line[0] == '@':
         if not original_line.startswith('@time') and not original_line.startswith('@account'):
-            print(original_line)
+            #print(original_line)
+            pass
         del split_line[0]
         single_line = ' '.join(split_line)
         orig_upper_split = original_line.split(' ')[1:]
@@ -1291,13 +1292,14 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     """
     # Write down tries per minute for this IP. And just close them all if its too many.
     hostname: str = cs_before_connect.socket.getpeername()[0]
+    print(cs_before_connect)
     if not check_fry_server(hostname):
         socket_data.clear_data(cs_before_connect)
         await aclose_sockets(sockets=(cs_before_connect,))
         return None
     socket_data.hostname[cs_before_connect] = hostname
-    port: str = Settings_ini["settings"]["listen_port"]
-    socket_data.echo(cs_before_connect, "Accepted a client connection on port " + port + '...')
+    port = f'{cs_before_connect.socket.getsockname()[1]}'
+    socket_data.echo(cs_before_connect, "Accepted a client connection on port " + str(port) + '...')
     bytes_data: bytes
     byte_string: str = ""
     auth: bool | None | tuple[str, str]
@@ -1312,13 +1314,6 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
                 await aclose_sockets(sockets=(cs_before_connect,))
                 socket_data.echo(cs_before_connect, "Server is too slow to send data. Socket closed.")
                 raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
-            if not bytes_data:
-                # proxy_server_handler
-                # socket_data.clear_data(cs_before_connect)
-                socket_data.echo(cs_before_connect, "Client closed connection.")
-                # await cs_before_connect.aclose()
-                raise EndSession('Client closed connection.')
-
             byte_string += usable_decode(bytes_data)
             if not byte_string.endswith("\r\n\r\n"):
                 continue
@@ -1376,7 +1371,7 @@ async def start_proxy_listener():
     if Settings_ini.has_section('settings') is False:
         Settings_ini.add_section('settings')
 
-    listen_ports: str = system_data.Settings_ini["settings"].get("listen_port", '4321')
+    listen_ports: str = system_data.Settings_ini["settings"].get("listen_ports", '4321')
     print('-+')
     try:
         async with trio.open_nursery() as nursery:
@@ -1399,7 +1394,7 @@ async def start_proxy_listener():
         #    sys.exit(13)
         # except SystemExit:
         #    os._exit(130)
-        #raise
+        raise
 
 
 async def quit_all() -> None:

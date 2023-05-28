@@ -39,3 +39,4 @@
 %bde_glob_network-link##5ioE 1
 %var testing
 %bde_cid_trio-ircproxy.py!active#1 $true
+%bde_glob_topic_history_#irssi#1685204421 Irssi ( https://irssi.org/ )
