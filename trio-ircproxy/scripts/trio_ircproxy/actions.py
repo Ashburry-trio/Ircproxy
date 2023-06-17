@@ -118,7 +118,7 @@ def ss_send_ctcp(server_socket: trio.SocketStream | trio.SSLStream, nick: str, c
     if not server_socket:
         return None
     ctcp_send = "PRIVMSG " + nick + " " + ":\x01" + ctcp + "\x01"
-    circular.sc_send(server_socket, ctcp_send)
+    sc_send(server_socket, ctcp_send)
     return None
 
 def send_ping(sc_socket: trio.SocketStream | trio.SSLStream, msg: str = ':TIMEOUTCHECK') -> None:
@@ -160,17 +160,17 @@ async def send_quit(sc_socket):
     await aclose_sockets(sockets=(other_socket, client_socket))
 
 
-def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> Optional[str]:
+def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> str:
     """The default quit message for the app"""
     if not msg:
         # Send to server
-        msg = "\x02trio-ircproxy.py\x02 from \x1fhttps://www.mslscript.com\x1f"
+        msg = "\x02Machine-Gun script\x02 from \x1fhttps://www.mslscript.com\x1f"
     msg = "QUIT :" + msg
     if to:
         # Send to client
         if socket_data.mynick:
-            msg = ':' + socket_data.mynick[to] + "!trio-ircproxy@www.mslscript.com " + msg
-            print(" MY NICK IS : " + socket_data.mynick[to])
+            msg = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
+            print("MY NICK IS : " + socket_data.mynick[to]
         else:
             return ''
     return msg

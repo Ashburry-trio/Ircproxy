@@ -235,7 +235,7 @@ menu Status,Channel {
   }
   ..-
   ..in&fo : /script_info -chan_link
-  .$style_annc_urls announce urls : annc_urls_toggle
+  .$style_annc_urls describe urls : annc_urls_toggle
   ..-
   ..info : script_info -urls
   .-
@@ -243,12 +243,12 @@ menu Status,Channel {
   .$style_auto_ial [&auto update ial] : toggle_auto_ial
 
   &trio-ircproxy.py
-  .&set server identity
-  ..$style_proxy &server's name $block($varname_glob(admin-server-name,none).value) : /bnc_msg set-name $$?="enter your server's name (letters only):"
-  ..$style_proxy &admin nickname $block($varname_glob(admin-nick,none).value) : /bnc_msg set-admin $$?="enter your contact nickname:"
-  ..$style_proxy &admin email $block($varname_glob(admin-smtp-email,none).value) : /bnc_msg set-email $$?="enter your system email:"
-  ..$style_proxy &mslscript.com username $block($varname_glob(admin-smtp-user,none).value) : /bnc_msg set-username $$?="enter your smtp server username:"
-  ..$style_proxy &mslscript.com password : /.bnc_msg set-password $$?="enter your old www.mslscript.com password:" $$?="enter your new server password:"
+  .&web-site
+  ..&describe home-chan/user
+  ..&change URL
+  ..&change username/password
+  ..-
+  ..visit your home-page : bnc_msg send-home-page
   ..-
   ..in&fo : /script_info -identity
   .-
@@ -280,7 +280,7 @@ menu Status,Channel {
   ..-
   ..info : script_info -port
   .-
-  .$style_proxy running status : /bnc_msg status
+  .running status : /bnc_msg status
   &connect irc
   .last used : /server
   .-

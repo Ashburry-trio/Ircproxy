@@ -35,8 +35,8 @@
 %b Workingv $me
 %topic_32 .:[BastilleBSD|Latest:0.8.20210115|https://discord.gg/3GSNvsQ52H|https://bastillebsd.org|https://docs.bastillebsd.org|https://twitter.com/BastilleBSD]:.
 %bde_glob_network-link#blank 1
-%bde_glob_topic_history_#bastillebsd#1684610124 .:[BastilleBSD | Latest: 0.8.20210115 | https://discord.gg/3GSNvsQ52H | https://bastillebsd.org | https://docs.bastillebsd.org | https://twitter.com/BastilleBSD ]:.
-%bde_glob_network-link##5ioE 1
+%bde_glob_network-link##5ioE 0
 %var testing
-%bde_cid_trio-ircproxy.py!active#1 $true
-%bde_glob_topic_history_#irssi#1685204421 Irssi ( https://irssi.org/ )
+%bde_glob_topic_history_#python#1686588963 Python programming chat. Casual and unofficial.
+%bde_glob_allow_bad_script_ban#freenode#5ioE $true
+%bde_cid_annc_urls!blank#1 $true

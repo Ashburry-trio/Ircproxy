@@ -150,9 +150,9 @@ def colourstrip(data: str) -> str:
     data = data.replace("\x1e", "")
     return data
 
-def exploit_triggered(client_socket, server_socket):
-    actions.sc_send('There was a exploit attempt by IRC network.')
-    actions.send_quit(server_socket, client_socket)
+def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream, server_socket: trio.SSLStream | trio.SocketStream):
+    socket_data.echo(client_socket, 'There was a exploit attempt by IRC network.')
+    await actions.send_quit(server_socket)
 
 def check_mirc_exploit(proto: str) -> bool:
     """Verifies that the nickname portions of the protocol
@@ -1318,7 +1318,8 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             if not byte_string.endswith("\r\n\r\n"):
                 continue
             break
-        except (BaseException, EndSession) as exc:
+        except (BaseException, EndSession, trio.Cancelled,trio.BrokenResourceError,
+                trio.ClosedResourceError, trio.BusyResourceError, trio.TrioInternalError) as exc:
             print("handler EXCEPT 1: " + str(exc.args))
             await aclose_both(cs_before_connect)
             socket_data.clear_data(cs_before_connect)
