@@ -1,14 +1,0 @@
-; below this header (marked with " ; ") is the list of bad channels.
-; while script is active a /whois is preformed on everyone as they join/speak and if
-; they are in a bad room they will be kicked and banned for 2 hours.
-; @active marks where the active items in the list end and begin.
-; the first @active = false ends the list processing completely.
-
-@active = true
-#*preteen*
-#holybible
-#bi-married-men
-#*femhumiliationsex*
-#*incest*
-@active = false
-#*nude*

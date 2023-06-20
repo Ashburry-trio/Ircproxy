@@ -40,3 +40,10 @@
 %bde_glob_topic_history_#python#1686588963 Python programming chat. Casual and unofficial.
 %bde_glob_allow_bad_script_ban#freenode#5ioE $true
 %bde_cid_annc_urls!blank#1 $true
+%bde_glob_allow_bad_script_ban#freenode#python $true
+%bde_glob_topic_history_#thelounge#1686988872 Welcome to #thelounge the unofficial channel || How to get started: https://thelounge.chat/docs || Community: https://thelounge.chat/community
+%bde_glob_topic_history_#python#1687170436 Anything Python is on-topic. | Don't paste, use https://bpa.st/+python | Questions about this channel? https://www.pound-python.org | CoC: https://j.mp/psf-coc | Tutorial: https://j.mp/PyTut | New programmer? https://j.mp/23X7emF | Ops: #python-ops
+%bde_glob_topic_history_#znc#1687170632 ZNC 1.8.2 https://wiki.znc.in/ChangeLog/1.8.2 | https://znc.in/nightly | https://github.com/znc/znc | Development at #znc-dev | don't randomly PM people
+%bde_glob_topic_history_#znc-dev#1687170655 The playground for ZNC developers | User support in #znc | Git: https://github.com/znc/znc/ | CI: https://travis-ci.org/znc/znc/ | Coverage: https://codecov.io/gh/znc/znc
+%bde_glob_topic_history_#libera-dev#1687209748 This channel is for development (and currently other supportive) work, please use #libera for general support queries. | https://libera.chat/contributing/development/ | Feel free to comment on dev talk and so on -- please be respectful though, attack ideas not people and so on.
+%bde_glob_topic_history_#adiirc#1687209851 Latest stable release: 4.3 - Latest Beta: 4.4 Build (2023/06/14 UTC) | Wiki: https://dev.adiirc.com | https://adiirc.com/changelog.php

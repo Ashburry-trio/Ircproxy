@@ -150,7 +150,7 @@ def colourstrip(data: str) -> str:
     data = data.replace("\x1e", "")
     return data
 
-def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream, server_socket: trio.SSLStream | trio.SocketStream):
+async def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream, server_socket: trio.SSLStream | trio.SocketStream):
     socket_data.echo(client_socket, 'There was a exploit attempt by IRC network.')
     await actions.send_quit(server_socket)
 
@@ -1395,7 +1395,6 @@ async def start_proxy_listener():
         #    sys.exit(13)
         # except SystemExit:
         #    os._exit(130)
-        raise
 
 
 async def quit_all() -> None:

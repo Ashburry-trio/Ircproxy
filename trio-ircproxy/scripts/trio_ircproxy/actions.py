@@ -170,7 +170,7 @@ def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> str:
         # Send to client
         if socket_data.mynick:
             msg = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
-            print("MY NICK IS : " + socket_data.mynick[to]
+            print("MY NICK IS : " + socket_data.mynick[to])
         else:
             return ''
     return msg

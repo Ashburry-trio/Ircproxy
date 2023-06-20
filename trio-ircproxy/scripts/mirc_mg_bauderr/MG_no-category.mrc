@@ -60,9 +60,13 @@ alias eecho {
   linesep -a
   echo -a 54,93Bauderr : %msg
 }
-alias strip-space { 
+alias strip-space-regx { 
   ; set to a variable to strip $crlf
   var %v = $regsubex($1-,/^\s+|\s+$/g,) | return %v 
+}
+alias strip-space-var {
+  var %v = $1-
+  while ($left($1,1) isin $crlf $+ $chr(32)
 }
 alias varname_cid {
   if ($1 == $null) { return }

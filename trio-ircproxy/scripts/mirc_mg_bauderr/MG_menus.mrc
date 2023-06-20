@@ -243,44 +243,10 @@ menu Status,Channel {
   .$style_auto_ial [&auto update ial] : toggle_auto_ial
 
   &trio-ircproxy.py
-  .&web-site
-  ..&describe home-chan/user
-  ..&change URL
-  ..&change username/password
-  ..-
-  ..visit your home-page : bnc_msg send-home-page
-  ..-
-  ..in&fo : /script_info -identity
+  .&visit your home-page : bnc_msg visit homepage
   .-
 
   ; Keep track of the IP and PORT in use so you know where to send the shutdown command to
-  .&start and stop
-  ..&start trio-ircproxy.py : /run $varname_glob(python,none).value $scriptdir..\..\trio-ircproxy.py
-  ..-
-  ..$style-proxy-shutdown &shutdown trio-ircproxy.py : /proxy-shutdown
-  .command line
-  ..run proxy : run $scriptdir..\..\..\runproxy.bat | eecho if there is an error the cmd.exe window will close automatically.
-  ..-
-  ..$iif(($exists($scriptdir..\..\venv)),$style(3)) &install : run $qt($scriptdir..\..\..\install.bat)
-
-  .-
-  .listen with ip
-  ..$iif(($varname_glob(bind-ip).value == private),$style(1)) 127.0.0.1 (private/this computer only) : set $varname_global(bind-ip) private
-  ..$iif(($varname_glob(bind-ip).value == global),$style(1)) [0.0.0.0 (public/local network)] : set $varname_global(bind-ip) global
-  ..-
-  ..info : script_info -listen
-
-  .u&se port numbers
-  ..$style(1) change $block(BNC $varname_glob(use-port,proxy).value) : {
-    var %pp = $$?="enter a port number for your proxy server: [4321]:"
-    set-service-port %pp
-  }
-  ..$iif(($varname_glob(use-port,proxy).value == 4321),$style(3)) [4321] : { set-service-port 4321 }
-
-  ..-
-  ..info : script_info -port
-  .-
-  .running status : /bnc_msg status
   &connect irc
   .last used : /server
   .-
@@ -788,41 +754,36 @@ alias bool_using_proxy {
 alias style_proxy {
   if (!$varname_cid(trio-ircproxy.py,active).value) { return $style(2) }
 }
-on *:text:*:$chr(42) $+ status: {
+on *:text:*:$chr(42) $+ mg-script: {
   tokenize 32 $strip($1-)
   if ($1- == Trio-ircproxy.py active for this connection) { set $varname_cid(trio-ircproxy.py, active) $true }
-  if ($1- == you are logged-in as Administrator) { set $varname_cid(trio-ircproxy.py, admin) $true }
-  if ($4 != $null) && (*your username is ??* iswm $1-4) { set $varname_cid(trio-ircproxy.py, is_user) $4 }
-  if ($1 == admin-nick) { set $varname_glob(admin-nick,none) $$2 }
-  if ($1 == admin-smtp-email) { set $varname_glob(admin-smtp-email,none) $$2 }
-  if ($1 == admin-smtp-hostname) { set $varname_glob(admin-smtp-hostname,none) $$2 }
-  if ($1 == admin-smtp-server-name) { set $varname_glob(admin-server-name,none) $$2 }
-  if ($1 == admin-smtp-user) { set $varname_glob(admin-smtp-user,none) $$2 }
-  if ($1 == admin-smtp-password) { set $varname_glob(admin-smtp-password,none) $$2 }
+  if ($4 != $null) && (*your username is ???* iswm $1-4) { set $varname_cid(trio-ircproxy.py, is_user) $4 }
   if (say-away == $1) && ($2 isin $true$false) { set $varname_glob(say-away,none) $2 }
-  if (operscan-join == $1) && ($2 isin $true$false) { set $varname_glob(operscan-join,none) $2 }
-  if ($1 == use-ports) { set $varname_global(use-port,proxy) $2 | set $varname_global(use-port,http) $3 }
-  if ($1 == identify-chanserv) { set $varname_global(identify-chanserv,$network) $true }
+  if (operscan-join == $1) && ($2 isin $true$false) { set $varname_cid(operscan-join,none) $2 }
+  if ($1 == identify-chanserv) { set $varname_cid(identify-chanserv,$network) $true }
   if ($1 == identify-nick) { return }
 }
 alias -l popup-identify-founder-list {
   if ($bool_using_proxy == $false) {  return $style(2) identify as &founder  }
   var %chan = $var($varname_global(identify-chanserv,$+(*,-,$$network)),1)
   var %chan = [ [ %chan ] ]
-  if (%chan) { return identify as &founder }
-
+  if (%chan) { 
+    if (!$varname_cid(identified-founder,%chan)) {
+    return identify as &founder }
+  }
+  else {
+    retrun $style(3) identify as &founder
+  }
 }
-alias www_run /run $scriptdir..\..\..\runall.bat $scriptdir..\..
 alias true$false {
   return $true $+ $false
 }
 alias is_status_nick {
   ;check is active nick is either one of the two status nicks available.
   ;;
-
   if ($1) { var %nick = $1 }
   elseif ($nick != $null) { var %nick = $nick }
-  if (~status != %nick) { return $false }
+  if ($chr($asc(*)) $+ mg-script != %nick) { return $false }
   return $true
 }
 menu menubar {

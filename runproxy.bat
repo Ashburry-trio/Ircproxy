@@ -47,3 +47,4 @@ pause
 :done
 call "deactivate.bat"
 :f
+:EOF
