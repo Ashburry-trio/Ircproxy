@@ -30,6 +30,7 @@
         .htaccess text
         *.sh text
         *.py text
+        *.bat text
 
         # These files are binary and should be left untouched
         # (binary is a macro for -text -diff)
