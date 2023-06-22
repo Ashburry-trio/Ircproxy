@@ -1,8 +1,6 @@
 @echo off
 cls
 echo.
-echo Adding terminate_autoanswer = 1 to clink settings file
-echo if you do not have clink download the latest setup.exe from https://github.com/chrisant996/clink/releases
 if "%1" == "-3.13" goto start
 if "%1" == "-3.12" goto start
 if "%1" == "-3.11" goto start
@@ -15,8 +13,6 @@ goto complete
 :start
 echo Ctrl+C to Exit
 pause
-if not exist "%UserProfile%\appdata\local\clink\" (mkdir "%UserProfile%\appdata\local\clink\")
-if not exist "%UserProfile%\appdata\local\clink\settings" (echo terminate_autoanswer = 1 >> %userProfile%\appdata\local\clink\settings)
 echo Creating virtual environment in folder named "venv" in the trio-ircproxy directory.
 py %1 -m venv .\trio-ircproxy\venv
 call .\activate.bat
@@ -30,3 +26,4 @@ echo.
 echo Running "runproxy.bat" to start the proxy server. User and password is "user : pass" port 4321
 call runproxy.bat
 :complete
+pause
