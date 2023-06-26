@@ -942,8 +942,12 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
         single_line: str
         while find_n > -1:
             single_line: str = byte_string[0:find_n + 1]
-            strip_line: str = lower_strip(single_line)
-            split_line: list[str] = strip_line.split(' ')
+            if single_line == '\n':
+                cs_received_line(client_socket, server_socket, '\n', ['\n'])
+                find_n = byte_string.find('\n')
+                continue
+            single_line: str = single_line.lower()
+            split_line: list[str] = single_line.split(' ')
             cs_received_line(client_socket, server_socket, single_line, split_line)
             try:
                 byte_string = byte_string[find_n + 1:]
