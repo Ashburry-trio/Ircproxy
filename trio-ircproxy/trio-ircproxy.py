@@ -89,11 +89,19 @@ from typing import Deque
 from chardet import detect
 import sys
 import os
+from cryptography.fernet import Fernet
 
 _dir = path.dirname(path.abspath(__file__))
 chdir(realpath(dirname(expanduser(argv[0]))))
 
 VERSION_NUM = "PEACE"
+
+
+def encrypt(message: bytes, key: bytes) -> bytes:
+    return Fernet(key).encrypt(message)
+
+def decrypt(token: bytes, key: bytes) -> bytes:
+    return Fernet(key).decrypt(token)
 
 
 def colourstrip(data: str) -> str:
@@ -378,6 +386,7 @@ async def proxy_make_irc_connection(cs_waiting_connect: trio.SocketStream
                                socket_data.send_buffer[client_socket], 'cs')
             nursery.start_soon(write_loop, client_socket, server_socket,
                                socket_data.send_buffer[server_socket], 'ss')
+            # maybe add a command loop for non async scripts to follow snf execute.
     except (BaseException, EndSession, BaseExceptionGroup):
         socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
@@ -400,7 +409,7 @@ def exc_print(msg) -> str:
 
 async def write_loop(client_socket: trio.SocketStream |
                                     trio.SSLStream, server_socket: trio.SocketStream | trio.SSLStream,
-                     send_buffer: Deque[str | bytes], which_sock: str) -> None:
+                     send_buffer: Deque[str | bytes | str], which_sock: str) -> None:
     """The server sockwrite write loop.
 
     vars:
@@ -464,7 +473,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     upper_nick_full_src: str
     original_line: str = single_line
     orig_upper_split: list[str] = original_line.split(' ')
-    split_line: list[str,...] = original_line.lower()
+    split_line: list[str,...] = original_line.lower().split()
     split_line = split_line.split(' ')
     nick_src: str
     src_nick_full: str
@@ -490,7 +499,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
             old_nick = upper_nick_src.lower()
             upper_nick_src = upper_nick_dest
             src_nick_full = colourstrip(nick_src + "!" + split_line[0].split("!")[1])
-            upper_nick_full_src = colourstrip(upper_nick_src + '!' + orig_upper_split[0],lower().split('!')[1])
+            upper_nick_full_src = colourstrip(upper_nick_src + '!' + orig_upper_split[0].lower().split('!')[1])
             if old_nick == socket_data.mynick[client_socket]:
                 socket_data.mynick[client_socket] = nick_src
                 socket_data.state[client_socket]['upper_nick'] = upper_nick_dest
@@ -763,10 +772,6 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         return None
     original_line: str = single_line
     orig_upper_split: list[str] = ' '.split(single_line)
-    #print('from SS -1: ' + single_line)
-    if check_mirc_exploit(original_line) is True:
-        await exploit_triggered(client_socket, server_socket)
-        return None
     if len(split_line) == 2 and socket_data.dcc_null[server_socket] is False and (
             split_line[0] == "100" or split_line[0] == "101"):
         # 100 or 101 nickname
@@ -783,10 +788,15 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         actions.sc_send(client_socket, single_line)
         return None
     socket_data.dcc_null[server_socket] = None
-
+    if check_mirc_exploit(original_line) is True:
+        await exploit_triggered(client_socket, server_socket)
+        await trio.sleep(0)
+        return None
     if original_line[0] == '@':
         if not original_line.startswith('@time') and not original_line.startswith('@account'):
-            #print(original_line)
+            print(original_line)
+            await trio.sleep(0)
+            return
             pass
         del split_line[0]
         single_line = ' '.join(split_line)
@@ -795,35 +805,33 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         orig_upper_split = original_line.split(' ')
     ial_send = await ss_updateial(client_socket, server_socket, single_line, split_line)
 
-    if len(split_line) < 2:
-        return None
     if '!' in orig_upper_split[0]:
-        nick_src = split_line[0].split('!')[0].strip(':').lower()
-        upper_nick_src = orig_upper_split[0].split('!')[0].strip(':')
-        if split_line[1] == 'nick':
-            upper_nick_dest = orig_upper_split[2].strip(':')
-            if nick_src == socket_data.mynick[client_socket]:
-                socket_data.mynick[client_socket] = upper_nick_dest.lower()
+        nick_src = split_line[0].split('!')[0].lstrip(':').lower()
+        upper_nick_src = orig_upper_split[0].split('!')[0].lstrip(':')
     if len(split_line) < 2:
         if len(original_line):
             actions.sc_send(client_socket, original_line)
+        await trio.sleep(0)
         return None
     if split_line[1] == 'ping' and len(split_line) >= 3:
         pong: str = str.strip(split_line[2].lstrip(':') + ' ' + ' '.join(split_line[3:]))
         actions.sc_send(server_socket, 'PONG :' + pong)
         actions.sc_send(client_socket, 'PING :' + str(time()))
+        await trio.sleep(0)
         return None
 
     if split_line[1] == 'pong' and len(split_line) >= 4:
         pong_str: str = split_line[3].lstrip(':')
         if len(pong_str) < 18:
             actions.sc_send(client_socket, original_line)
+            await trio.sleep(0)
             return None
         try:
             pong: float = float(pong_str)
             dur = duration(seconds=round(time() - pong, 2))
             dur_str: str = dur_replace(dur.in_words())
             socket_data.msg_to_client(client_socket, 'Server Lag: ' + dur_str)
+            await trio.sleep(0)
             return None
         except ValueError:
             pass
@@ -831,15 +839,18 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         # motd start 3rd param is nickname
         if socket_data.state[client_socket]['motd_def']:
             send_motd(client_socket, split_line[2])
+            await trio.sleep(0)
             return None
 
     if split_line[1] == '372':
         # motd msg
         if socket_data.state[client_socket]['motd_def']:
+            await trio.sleep(0)
             return None
 
     if split_line[1] == '376' or split_line[1] == "422":
         # End of /motd # keep track if it is the first motd (on connect) or already connected.
+        # Keep track of neither 376 nor 422 is used.
         if not socket_data.state[client_socket]['connected']:
             socket_data.state[client_socket]['doing'] = 'signed on'
             socket_data.state[client_socket]['connected'] = time()
@@ -848,18 +859,19 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         # End of /motd
         if socket_data.state[client_socket]['motd_def']:
             socket_data.state[client_socket]['motd_def'] = 0
+            await trio.sleep(0)
             return None
 
     elif split_line[1] == '005':
         sock_005(client_socket, original_line)
-
+        await trio.sleep(0)
     elif split_line[1] in ("001", "372", "005", "376", "375", "422"):
         socket_data.state[client_socket]['doing'] = 'signed on'
         socket_data.mynick[client_socket] = split_line[2].lower()
         socket_data.state[client_socket]['upper_nick'] = orig_upper_split[2]
-        print('upper nick : ' + socket_data.state[client_socket]['upper_nick'])
+        print('b4 sert nicknet: upper nick : ' + socket_data.state[client_socket]['upper_nick'])
         socket_data.set_face_nicknet(client_socket)
-
+        await trio.sleep(0)
     elif split_line[1] == '301' and False:
         pass
         # reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
@@ -869,8 +881,10 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         # actions.sc_send(client_socket, msg)
 
     if ial_send is False:
+        await trio.sleep(0)
         return None
     actions.sc_send(client_socket, original_line)
+    await trio.sleep(0)
     return None
 
 
@@ -887,11 +901,13 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
     byte_string: str = ''
     max_RECV: int = 355350000
     bytes_data: bytes = b''
+    await trio.sleep(0)
     while True:
         if len(bytes_data) == max_RECV:
             await trio.sleep(1)
-        bytes_data = b''
+        bytes_data: bytes = b''
         if not is_socket(client_socket) or not is_socket(server_socket):
+            await trio.sleep(0)
             return None
         closed: bool = False
         try:
@@ -902,12 +918,13 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             if closed is False:
                 print("trio-ircproxy: client closed the socket.")
             elif closed:
-                print('trio-ircproxy: socket to client crashed.')
+                print('trio-ircproxy: server socket crashed.')
             if client_socket in socket_data.mysockets:
                 try:
                     await actions.send_quit(client_socket)
                 except:
                     pass
+            await trio.sleep(0)
             return None
         bytes_cap += len(bytes_data)
         if ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
@@ -915,16 +932,15 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
                 ("mynick" in socket_data.dcc_chat[client_socket] and "othernick" in
                  socket_data.dcc_chat[server_socket]):
             actions.sc_send(server_socket, bytes_data)
+            await trio.sleep(0)
             continue
         byte_string += usable_decode(bytes_data)
         byte_string: str = byte_string.replace('\r', '\n')
         while '\n\n' in byte_string:
             byte_string = byte_string.replace('\n\n', '\n')
-        byte_string: str = byte_string.lstrip('\n')
         find_n: int = byte_string.find('\n')
         single_line: str
         while find_n > -1:
-            byte_string: str = byte_string.lstrip('\n')
             single_line: str = byte_string[0:find_n + 1]
             strip_line: str = lower_strip(single_line)
             split_line: list[str] = strip_line.split(' ')
@@ -935,7 +951,7 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
                 byte_string = ''
                 break
             find_n = byte_string.find('\n')
-
+        await trio.sleep(0)
 
 def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                      server_socket: trio.SocketStream | trio.SSLStream,
@@ -950,6 +966,9 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                 :@return: None
 
     """
+    if single_line == '':
+        actions.sc_send(server_socket, single_line)
+        return
     if socket_data.dcc_null[client_socket] == True:
         actions.sc_send(server_socket, single_line)
         return
@@ -961,6 +980,7 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
             socket_data.dcc_chat[client_socket]["mynick"] = split_line[1]
             socket_data.dcc_null[client_socket] = True
             actions.sc_send(server_socket, original_line)
+            await trio.sleep(0)
             return
     elif len(split_line) >= 3 and socket_data.dcc_null[client_socket] is False:
         if split_line[0] == "120" or split_line[0] == "121":
@@ -978,14 +998,24 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     if split_line[0] == 'names':
         chan = split_line[1].lstrip(':')
         ial.IALData.myial_count[client_socket][chan] = 0
+        if len(split_line) > 1:
+            await actions.sc_send(server_socket, 'names ' + split_line[1])
+        else:
+            await actions.sc_send(server_socket, 'names')
+        await trio.sleep(0)
+        return
+        #
         # Erase above code or change to detect raw in ss_received_line
+        #
     len_split_line: int = len(split_line)
     if len_split_line < 2:
+        await trio.sleep(0)
         return None
     if split_line[1] == 'pong' and len_split_line >= 3:
         pong_str: str = split_line[2].lstrip(':')
         if len(pong_str) < 10:
             actions.sc_send(server_socket, original_line)
+            await trio.sleep(0)
             return None
         if pong_str.isdecimal():
             pong: float = float(pong_str)
@@ -999,12 +1029,14 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                     time_last_pong: float = seconds
                     socket_data.echo(client_socket, 'Client Lag: ' + dur_str)
             print('pong_str reached return None')
+            await trio.sleep(0)
             return None
 
     if split_line[1] == 'ping' and len(split_line) >= 3:
         pong_str: str = str.strip(split_line[2].lstrip(':') + ' ' + ' '.join(split_line[3:]))
         actions.sc_send(client_socket, 'PONG www.mslscript.com :' + pong_str)
         actions.sc_send(server_socket, 'PING :' + str(time()))
+        await trio.sleep(0)
         return None
 
     halt_on_yes: bool | None = False
@@ -1013,6 +1045,7 @@ def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         halt_on_yes = cs_rcvd_command(client_socket, server_socket, single_line, split_line)
     if not halt_on_yes:
         actions.sc_send(server_socket, original_line)
+        await trio.sleep(0)
     return None
 
 

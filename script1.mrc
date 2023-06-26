@@ -11,3 +11,4 @@ Automatically attempts to regain IRC primary nick.
 Recover channel operator in empty channel.
 List multiple occurences of the same nick(s) in a set of channels
 Changing the password does not take affect until the new password has been used,
+Force nick for spcific networks, on start
