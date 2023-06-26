@@ -726,7 +726,10 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             single_line: str
             while find_n > -1:
                 single_line = byte_string[0:find_n + 1]
-                #print(single_line)
+                if single_line == '\n':
+                    await ss_received_line(client_socket, server_socket, '\n', ['\n'])
+                    find_n = byte_string.find('\n')
+                    continue
                 split_line = lower_strip(single_line)
                 split_line = split_line.split(' ')
                 await ss_received_line(client_socket, server_socket, single_line, split_line)
@@ -788,6 +791,10 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         actions.sc_send(client_socket, single_line)
         return None
     socket_data.dcc_null[server_socket] = None
+    if single_line == '':
+        actions.sc_send(client_socket, original_line)
+        await trio.sleep(0)
+        return
     if check_mirc_exploit(original_line) is True:
         await exploit_triggered(client_socket, server_socket)
         await trio.sleep(0)
@@ -872,13 +879,12 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         print('b4 sert nicknet: upper nick : ' + socket_data.state[client_socket]['upper_nick'])
         socket_data.set_face_nicknet(client_socket)
         await trio.sleep(0)
-    elif split_line[1] == '301' and False:
-        pass
-        # reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
-        # msg = f":ashburry.pythonanywhere.com NOTICE {socket_data.mynick[client_socket]}" \
-        #         f" :User {orig_upper_split[3]} is" \
-        #         f" set away, reason: {reason}"
-        # actions.sc_send(client_socket, msg)
+    elif split_line[1] == '301':
+        reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
+        msg = f":www.mslscript.com NOTICE {socket_data.mynick[client_socket]}" \
+                f" :User {orig_upper_split[3]} is" \
+                f" set away, reason: {reason}"
+        actions.sc_send(client_socket, msg)
 
     if ial_send is False:
         await trio.sleep(0)
@@ -943,12 +949,12 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
         while find_n > -1:
             single_line: str = byte_string[0:find_n + 1]
             if single_line == '\n':
-                cs_received_line(client_socket, server_socket, '\n', ['\n'])
+                await cs_received_line(client_socket, server_socket, '\n', ['\n'])
                 find_n = byte_string.find('\n')
                 continue
             single_line: str = single_line.lower()
             split_line: list[str] = single_line.split(' ')
-            cs_received_line(client_socket, server_socket, single_line, split_line)
+            await cs_received_line(client_socket, server_socket, single_line, split_line)
             try:
                 byte_string = byte_string[find_n + 1:]
             except IndexError:
@@ -957,7 +963,7 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             find_n = byte_string.find('\n')
         await trio.sleep(0)
 
-def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
+await def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                      server_socket: trio.SocketStream | trio.SSLStream,
                      single_line: str, split_line: list[str]) \
         -> None:
