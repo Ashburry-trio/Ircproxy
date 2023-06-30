@@ -156,7 +156,7 @@ async def send_quit(sc_socket):
     except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
             ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
         return
-    await trio.sleep(10)
+    await trio.sleep(5)
     await aclose_sockets(sockets=(other_socket, client_socket))
 
 
@@ -187,7 +187,7 @@ def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> 
     """
     if not client_socket or not msg:
         return None
-    msg = ":status!trio-ircproxy@www.mslscript.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
+    msg = ":*mg-script!trio-ircproxy@www.mslscript.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
     sc_send(client_socket, msg)
     return None
 
@@ -232,5 +232,4 @@ def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, msg: str) 
 
     """
     msg = f":*mg-script!trio-ircproxy@www.mslscript.com NOTICE {nick} :{msg}"
-    circular.sc_send(client_socket, msg)
-
+    sc_send(client_socket, msg)

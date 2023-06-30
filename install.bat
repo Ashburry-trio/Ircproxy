@@ -17,11 +17,11 @@ echo Creating virtual environment in folder named "venv" in the trio-ircproxy di
 py %1 -m venv .\trio-ircproxy\venv
 call .\activate.bat
 echo Install wheel and pip...
-python.exe -m pip install pip
-python.exe -m pip install --upgrade pip
-pip install wheel
+python.exe -m pip --require-virtualenv install pip
+python.exe -m pip --require-virtualenv install --upgrade pip
+pip --require-virtualenv install wheel
 echo Installing requirments via "pip install -r .\trio-ircproxy\requirements.txt"
-pip install -r .\trio-ircproxy\requirements.txt
+pip --require-virtualenv install -r .\trio-ircproxy\requirements.txt
 echo.
 echo Running "runproxy.bat" to start the proxy server. User and password is "user : pass" port 4321
 call runproxy.bat

@@ -88,6 +88,7 @@ def commands(client_socket, server_socket, single_line, split_line) -> None:
         # Set admin password, only works from 'user' and 'admin' accounts.
         # Do not make it possible to set user : pass login once changed.
         pass
+    
     if fnmatch(command, '*login*'):
         if len(split_line) < 3 or len(split_line) > 3:
             circular.status_msg(client_socket, 'Syntax: /proxy-login <username> <password>')

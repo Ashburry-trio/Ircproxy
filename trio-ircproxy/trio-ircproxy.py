@@ -1122,7 +1122,7 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     actions.sc_send(client_socket, prefix + '\x02skipping MOTD\x02, for a quick connection '
                                             'startup. -')
     actions.sc_send(client_socket, prefix)
-    actions.sc_send(client_socket, prefix + 'To connect to an SSL port, '
+    actions.sc_send(client_socket, prefix + 'To connect to a SSL port, '
                                             '\x02DO NOT\x02 prefix the port with -')
     actions.sc_send(client_socket, prefix + 'an \x02+\x02 character. End-to-end encryption'
                                             ' is not possible; but SSL from proxy to irc server is. -')
@@ -1141,8 +1141,8 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
                                             "\x02/motd\x02 -")
     actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Machine-Gun mSL script"
                                             " official website: -")
-    actions.sc_send(client_socket, prefix + "X-Clacks-Overhead:\x02 'GNU Terry Pratchett\x02 -")
     actions.sc_send(client_socket, prefix + "Server: \x1fhttps://www.mslscript.com/index.html\x1f -")
+    actions.sc_send(client_socket, prefix + "'X-Clacks-Overhead':\x02 'GNU Terry Pratchett' \x02-")
     prefix = ':www.mslscript.com 376 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + 'End of /MOTD -')
     return None
