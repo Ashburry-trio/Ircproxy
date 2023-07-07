@@ -2,15 +2,24 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-#import http3
-import requests
-flood = 0
+import http3
+#import requests
 
-def get_desc(url,/, *, flood=flood):
-    flood += 1
-    #client = http3.AsyncClient()
-    #page = client.get('url')
-    page = requests.get(url)
+
+class Games():
+    def __init__(self):
+        self.all_bj_games = []
+        self.all_simple_dice_gmaes = []
+
+class Game():
+    def __init__(self, game_type, owner):
+        self.type = game_type
+        self.owner = owner
+
+async def get_url_desc(url):
+    client = http3.AsyncClient()
+    page = await client.get(url)
+    # page = requests.get(url)
     page_text: str = page.text
     while '\n' in page_text:
         page_text = page_text.replace('\n','')
@@ -20,19 +29,28 @@ def get_desc(url,/, *, flood=flood):
     # while chr(39) in page_text_low:
     #    page_text_low = page_text_low.replace(chr(39), '"')
     tit_start = page_text_low.find('<title')
-    if tit_start == -1:
-        print('NO TITLE')
-        return
-    find_close = page_text[tit_start:]
-    find_close_1 = find_close
-    find_close_int = find_close.find('>')
-    ans = find_close_1[find_close_int + 1:][:find_close_1[find_close_int:].find('<') - 1]
-    print(f'Title: {ans[:70]}')
-
+    if tit_start > -1:
+        find_close = page_text[tit_start:]
+        find_close_1 = find_close
+        find_close_int = find_close.find('>')
+        ans = find_close_1[find_close_int + 1:][:find_close_1[find_close_int:].find('<') - 1]
+        if not ans:
+            ans = 'nothing to show.'
+    else:
+        ans = 'nothing to show.'
+    ans = ans[:70]
     desc = page_text_low.find('<meta name="description" content="')
     desc = page_text[desc+34:]
     desc_end = desc.find('/>') - 2
     desc = desc[:desc_end]
-    print(f'Description: {desc}')
-    flood -= 1
-get_desc('https://www.mslscript.com')
+    if not desc:
+        desc = 'nothing to show.'
+    desc = desc[:160]
+
+    title = ans
+    desc = desc
+    tit_desc = (url, title, desc)
+    return tit_desc
+
+class URLFloodError(Exception):
+    pass

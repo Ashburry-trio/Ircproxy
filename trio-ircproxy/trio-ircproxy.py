@@ -343,58 +343,62 @@ async def proxy_make_irc_connection(cs_waiting_connect: trio.SocketStream
 
     """
     # print("making irc connection")
+    ss_hostname = ss_hostname.lower()
     server_socket: trio.SocketStream | trio.SSLStream
     client_socket: trio.SocketStream | trio.SSLStream
     server_socket_nossl: trio.SocketStream | trio.SSLStream
     client_socket_nossl: trio.SocketStream | trio.SSLStream
     try:
-        server_socket_nossl = await trio.open_tcp_stream(ss_hostname, port,
-                                                         happy_eyeballs_delay=1.15)
-    except (gaierror, ConnectionRefusedError, OSError, ConnectionAbortedError, ConnectionError):
-        await socket_data.raw_send(cs_waiting_connect, None,
+        client_socket_nossl = cs_waiting_connect
+        server_socket_nossl = await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=1.15)
+        granted: bytes = b"HTTP/1.0 200 connection started with irc server.\r\n\r\n"
+        if not await socket_data.raw_send(client_socket_nossl, server_socket_nossl, granted):
+            return None
+    except:
+    #except (gaierror, ConnectionRefusedError, OSError, ConnectionAbortedError, ConnectionError):
+        await socket_data.raw_send(client_socket_nossl, None,
                                    b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
-        await aclose_sockets(sockets=(cs_waiting_connect,))
+        await aclose_sockets(sockets=(cs_waiting_connect,server_socket_nossl))
+        print("UNABLE TO CONNECT TO IRC SERVER")
         return None
     try:
-        # Change to client_socket_nossl
-        client_socket_nossl = cs_waiting_connect
-        granted: bytes = b"HTTP/1.0 200 connection started with irc server.\r\n\r\n"
-
-        if port in (6697, 9999, 443, 6699, 6999, 7070, 7000) and \
-                ss_hostname != 'irc.undernet.org':
+        print('port : ' + str(port))
+        if port in (6697, 9999, 443, 6699, 6999, 7070) and \
+                ss_hostname != 'irc.undernet.org' and (port == 7000 and ss_hostname != 'irc.dal.net'):
             context_ssl = create_default_context()
             server_socket_ssl = trio.SSLStream(server_socket_nossl, context_ssl,
                                                server_hostname=ss_hostname, https_compatible=False)
 
             server_socket = server_socket_ssl
             client_socket = client_socket_nossl
-            del server_socket_ssl
         else:
             server_socket = server_socket_nossl
             client_socket = client_socket_nossl
         del server_socket_nossl
         del client_socket_nossl
+        #del server_socket_ssl
+        #del client_socket_ssl
 
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ':' + str(port)
-        if not await socket_data.raw_send(client_socket, server_socket, granted):
-            return None
+
         async with trio.open_nursery() as nursery:
             nursery.start_soon(ss_received_chunk, client_socket, server_socket)
             nursery.start_soon(cs_received_chunk, client_socket, server_socket)
-            nursery.start_soon(write_loop, client_socket, server_socket,
-                               socket_data.send_buffer[client_socket], 'cs')
-            nursery.start_soon(write_loop, client_socket, server_socket,
-                               socket_data.send_buffer[server_socket], 'ss')
-            # maybe add a command loop for non async scripts to follow snf execute.
-    except (BaseException, EndSession, BaseExceptionGroup):
-        socket_data.clear_data(client_socket)
-        await aclose_both(client_socket)
+            # Write to client
+            nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[client_socket], 'cs')
+            # Write to server
+            nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
+
+    except:
+        socket_data.clear_data(cs_waiting_connect)
+        await aclose_both(cs_waiting_connect)
+        print('write loops and chunks have stopped!')
         # return
         raise
     finally:
         # proxy_make_irc_connection()
-        print("connections were closed. nursery finished!")
+        print("connections were closed. nursery finished")
 
 
 def exc_print(msg) -> str:
@@ -422,18 +426,16 @@ async def write_loop(client_socket: trio.SocketStream |
     """
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
         try:
-            line = send_buffer.popleft()
+            line = str(usable_decode(send_buffer.popleft()).rstrip())
+            #line = line[1:-1]
+
         except IndexError:
-            await trio.sleep(0)
+            await trio.sleep(0.3)
             continue
-        line = line.strip()
+        line += "\n"
         if not isinstance(line, bytes):
-            line = line.encode("utf8", errors="replace")
-        if line == b'':
-            await trio.sleep(0)
-            continue
-        line += b"\n"
-        with trio.fail_after(60):
+            line = line.encode("utf-8", errors="replace")
+        with trio.fail_after(120):
             try:
                 if which_sock == 'ss':
                     await server_socket.send_all(line)
@@ -443,7 +445,8 @@ async def write_loop(client_socket: trio.SocketStream |
                     trio.TooSlowError, trio.BusyResourceError, OSError, BaseException) as exc:
                 print('write error! ' + which_sock + ' ' + str(exc) + ' '
                       + str(exc.args) + ' LINE: ' + str(line))
-                raise EndSession('Write Error. ' + which_sock, client_socket)
+                #raise EndSession('Write Error. ' + which_sock + ' ' + str(line))
+                raise
             await trio.sleep(0)
             continue
 
@@ -473,8 +476,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     upper_nick_full_src: str
     original_line: str = single_line
     orig_upper_split: list[str] = original_line.split(' ')
-    split_line: list[str,...] = original_line.lower().split()
-    split_line = split_line.split(' ')
+    split_line: list[str, ...] = original_line.lower().split()
     nick_src: str
     src_nick_full: str
     upper_nick_src: str
@@ -528,7 +530,8 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
             ial.IALData.ial_remove_nick(client_socket, nick_src, chan)
             ial.IALData.myial_count[client_socket][chan] -= 1
     if split_line[0] == "join":
-        chan = split_line[1].lower()
+        chan = orig_upper_split[1].lower()
+        keyword =  orig_upper_split[2]
         chan = chan.lstrip(':')
         my_usernick = socket_data.mynick[client_socket]
         if nick_src != my_usernick:
@@ -672,86 +675,51 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
         :@param server_socket: irc server socket stream
         :@return: returns if the nursery needs to be closed.
     """
-    try:
-        if 'connecting' == socket_data.state[client_socket]['doing']:
-            socket_data.state[client_socket]['doing'] = 'signing on'
-            socket_data.echo(client_socket, 'connected to ' + socket_data.hostname[server_socket])
-        bytes_cap: int = 0
-        byte_string: str = ''
-        max_RECV: int = 25535000
-        rcvd_bytes: bytes = b''
-        in_read: bool = False
+
+    if 'connecting' == socket_data.state[client_socket]['doing']:
+        socket_data.state[client_socket]['doing'] = 'signing on'
+        socket_data.echo(client_socket, 'connected to ' + socket_data.hostname[server_socket])
+
+    rcvd_line = ss_received_line
+    dest_socket = server_socket
+    read_line: bytes = b''
+    read_str: str = ''
+    read_strip: str = ''
+    read_split: list[None | str, ...] = []
+    read_some: bytes
+    find_n: int = -1
+    while True:
+        try:
+            read_sock = await dest_socket.receive_some(10000000)
+        except trio.BusyResourceError:
+            await trio.sleep(0.1)
+        except:
+            raise
+        if read_sock == b'':
+            raise EndSession('Connection closed')
+        read_line += read_sock
         while True:
-            if in_read == True:
-                await trio.sleep(0.001)
-            in_read = True
-            if len(rcvd_bytes) == max_RECV:
-                await trio.sleep(1)
-            rcvd_bytes = b''
-            closed: bool = False
-            try:
-                rcvd_bytes = await server_socket.receive_some(max_RECV)
-            except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror,
-                    trio.TooSlowError, OSError):
-                closed = True
-            if not rcvd_bytes:
-                if closed:
-                    print('trio-ircproxy: server socket crashed.')
-                elif closed is False:
-                    print("trio-ircproxy: socket closed by irc server.")
-                return None
-
-            bytes_cap += len(rcvd_bytes)
-
-            if ((client_socket in socket_data.dcc_send) and (server_socket in
-                                                             socket_data.dcc_send) and
-                ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
-                 socket_data.dcc_send[server_socket])) or \
-                    ((client_socket in socket_data.dcc_chat) and (server_socket in
-                                                                  socket_data.dcc_chat) and
-                     ("mynick" in socket_data.dcc_chat[client_socket] and "othernick" in
-                      socket_data.dcc_chat[server_socket])):
-                actions.sc_send(client_socket, rcvd_bytes)
-                continue
-
-            if not is_socket(client_socket) or not is_socket(server_socket):
-                return False
-
-            byte_string += usable_decode(rcvd_bytes)
-            byte_string = byte_string.replace('\r', '\n')
-            while '\n\n' in byte_string:
-                byte_string = byte_string.replace('\n\n', '\n')
-
-            find_n = byte_string.find('\n')
-            single_line: str
-            while find_n > -1:
-                single_line = byte_string[0:find_n + 1]
-                if single_line == '\n':
-                    await ss_received_line(client_socket, server_socket, '\n', ['\n'])
-                    find_n = byte_string.find('\n')
-                    continue
-                split_line = lower_strip(single_line)
-                split_line = split_line.split(' ')
-                await ss_received_line(client_socket, server_socket, single_line, split_line)
-                try:
-                    byte_string = byte_string[find_n + 1:]
-                except IndexError:
-                    byte_string = ''
-                    break
-                find_n = byte_string.find('\n')
-                # in Loop
-            in_read = False
-        # out loop
-    except (trio.Cancelled, ValueError, KeyError, Exception, BaseExceptionGroup, trio.BrokenResourceError,
-            trio.ClosedResourceError, trio.BusyResourceError, BaseException):
-        print('value, key error, exception')
-        raise
-    finally:
-        print('loop for ss_received_chunk finally finished')
-        if server_socket in socket_data.mysockets:
-            await actions.send_quit(server_socket)
-            # ss_received_chunk
-            # socket_data.clear_data(client_socket)
+            await trio.sleep(0)
+            find_n = read_line.find(b'\n')
+            if find_n == -1:
+                break
+            read_some_found: int = len(read_line[0:find_n + 1])
+            read_some = read_line[0:find_n + 1]
+            #print(b'read some: ' + read_some)
+            read_str = usable_decode(read_some)
+            read_strip = lower_strip(read_str)
+            read_split = read_strip.split(' ')
+            await rcvd_line(client_socket, server_socket, read_str, read_split)
+            remain = read_line[read_some_found:]
+            read_line = remain
+            #print(b'remaining: ' + read_line)
+        if find_n == -1:
+            read_str = ''
+            read_strip = ''
+            read_split = []
+            read_sock = b''
+            find_n = -1
+        await trio.sleep(0.50)
 
 
 async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
@@ -767,119 +735,91 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
     """
     # from above ss_received_chunk()
-
+    dest_socket: trio.SocketStream | trio.SSLStream = client_socket
     nick_src: str = ''
-    #print(single_line)
-    if socket_data.dcc_null[server_socket] == False:
-        actions.sc_send(client_socket, single_line)
-        return None
-    original_line: str = single_line
-    orig_upper_split: list[str] = ' '.split(single_line)
-    if len(split_line) == 2 and socket_data.dcc_null[server_socket] is False and (
-            split_line[0] == "100" or split_line[0] == "101"):
-        # 100 or 101 nickname
-        socket_data.dcc_chat[server_socket]["othernick"] = split_line[1]
-        socket_data.dcc_null[server_socket] = True
-        actions.sc_send(client_socket, single_line)
-        return None
+    #print('SS got line: '+repr(single_line))
+    original_line = single_line
+    single_line = single_line.lower()
+    if len(split_line) == 0:
+        print('ooooo ZERO BYTES ooooo')
 
-    if len(split_line) >= 4 and socket_data.dcc_null[client_socket] is False and (
-            split_line[0] == "120" or split_line[0] == "121"):
-        # 120 _ashbrry 1427104089 100.Days.to.Live.2021.HDRip.XviD.AC3-EVO.avi
-        socket_data.dcc_send[server_socket]["othernick"] = split_line[1]
-        socket_data.dcc_null[server_socket] = True
-        actions.sc_send(client_socket, single_line)
-        return None
-    socket_data.dcc_null[server_socket] = None
-    if single_line == '':
-        actions.sc_send(client_socket, original_line)
-        await trio.sleep(0)
-        return
     if check_mirc_exploit(original_line) is True:
         await exploit_triggered(client_socket, server_socket)
         await trio.sleep(0)
         return None
     if original_line[0] == '@':
-        if not original_line.startswith('@time') and not original_line.startswith('@account'):
-            print(original_line)
+        print('@@@@@@@ '+original_line+' @@@@')
+        if not sinle_line.startswith('@time') and not single_line.startswith('@account'):
+            print('Line starts with an ew @ sign text')
+            print('@@@@@@ @@@ @ @ ' + original_line)
             await trio.sleep(0)
             return
-            pass
         del split_line[0]
         single_line = ' '.join(split_line)
         orig_upper_split = original_line.split(' ')[1:]
     else:
         orig_upper_split = original_line.split(' ')
+    source_line: str
+    if single_line[0] == ':':
+        source_line = split_line[0]
+        single_line = ' '.join(single_line.split(' ')[1:])
+        split_line = split_line[1:]
+    if split_line[0] == 'ping':
+        actions.sc_send(dest_socket, 'PONG ' + str(' '.join(orig_upper_split[1:])))
+      #  print('2 gggggggggggggggggggggg ' + str(orig_upper_split[0:]) + 'hhhhhhhhhhhhhhhhhhhhhhhhh')
+        return
     ial_send = await ss_updateial(client_socket, server_socket, single_line, split_line)
 
     if '!' in orig_upper_split[0]:
-        nick_src = split_line[0].split('!')[0].lstrip(':').lower()
+        nick_src = orig_upper_split[0].split('!')[0].lstrip(':').lower()
         upper_nick_src = orig_upper_split[0].split('!')[0].lstrip(':')
+    if len(split_line) >= 2 and split_line[1].lower() == 'pong':
+    #    print(f'3 aaaaaaaaaaaaaaaaaaaaaa + {str(orig_upper_split[1])} + aaaaaaaaaaaaaaaaaaaaaaaaaa')
+        actions.sc_send(dest_socket, 'PONG :'+ orig_upper_split[1])
+        return
     if len(split_line) < 2:
         if len(original_line):
-            actions.sc_send(client_socket, original_line)
+            actions.sc_send(dest_socket, original_line)
         await trio.sleep(0)
         return None
-    if split_line[1] == 'ping' and len(split_line) >= 3:
-        pong: str = str.strip(split_line[2].lstrip(':') + ' ' + ' '.join(split_line[3:]))
-        actions.sc_send(server_socket, 'PONG :' + pong)
-        actions.sc_send(client_socket, 'PING :' + str(time()))
-        await trio.sleep(0)
-        return None
-
-    if split_line[1] == 'pong' and len(split_line) >= 4:
-        pong_str: str = split_line[3].lstrip(':')
-        if len(pong_str) < 18:
-            actions.sc_send(client_socket, original_line)
-            await trio.sleep(0)
-            return None
-        try:
-            pong: float = float(pong_str)
-            dur = duration(seconds=round(time() - pong, 2))
-            dur_str: str = dur_replace(dur.in_words())
-            socket_data.msg_to_client(client_socket, 'Server Lag: ' + dur_str)
-            await trio.sleep(0)
-            return None
-        except ValueError:
-            pass
-    if split_line[1] == '375':
+    elif split_line[0] == '375':
         # motd start 3rd param is nickname
         if socket_data.state[client_socket]['motd_def']:
-            send_motd(client_socket, split_line[2])
+            send_motd(dest_socket, split_line[2])
             await trio.sleep(0)
             return None
 
-    if split_line[1] == '372':
+    if split_line[0] == '372':
         # motd msg
         if socket_data.state[client_socket]['motd_def']:
             await trio.sleep(0)
             return None
 
-    if split_line[1] == '376' or split_line[1] == "422":
+    if split_line[0] == '376' or split_line[0] == "422":
         # End of /motd # keep track if it is the first motd (on connect) or already connected.
         # Keep track of neither 376 nor 422 is used.
         if not socket_data.state[client_socket]['connected']:
             socket_data.state[client_socket]['doing'] = 'signed on'
             socket_data.state[client_socket]['connected'] = time()
 
-    if split_line[1] == '376':
+    if split_line[0] == '376':
         # End of /motd
         if socket_data.state[client_socket]['motd_def']:
             socket_data.state[client_socket]['motd_def'] = 0
             await trio.sleep(0)
             return None
 
-    elif split_line[1] == '005':
+    elif split_line[0] == '005':
         sock_005(client_socket, original_line)
         await trio.sleep(0)
-    elif split_line[1] in ("001", "372", "005", "376", "375", "422"):
+    elif split_line[0] in ("001", "372", "005", "376", "375", "422"):
         socket_data.state[client_socket]['doing'] = 'signed on'
         socket_data.mynick[client_socket] = split_line[2].lower()
         socket_data.state[client_socket]['upper_nick'] = orig_upper_split[2]
         print('b4 sert nicknet: upper nick : ' + socket_data.state[client_socket]['upper_nick'])
         socket_data.set_face_nicknet(client_socket)
         await trio.sleep(0)
-    elif split_line[1] == '301':
+    elif split_line[0] == '301':
         reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
         msg = f":www.mslscript.com NOTICE {socket_data.mynick[client_socket]}" \
                 f" :User {orig_upper_split[3]} is" \
@@ -895,78 +835,59 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
 
 async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
-                            server_socket: trio.SocketStream | trio.SSLStream) -> None:
-    """
-    Receive a chunk of data and call cs_received_line() when atleast one line has completed
-    @param client_socket: the socket to the irc-client
-    @param server_socket: the socket to the irc-server
-    @return: None.
+                            server_socket: trio.SocketStream | trio.SSLStream) -> bool | None:
+    """Read loop to receive data from the socket and pass it to
+        fast_line_split_for_read_loop()
 
+        :@param client_socket: client socket stream
+        :@param server_socket: irc server socket stream
+        :@return: returns if the nursery needs to be closed.
     """
-    bytes_cap: int = 0
-    byte_string: str = ''
-    max_RECV: int = 355350000
-    bytes_data: bytes = b''
-    await trio.sleep(0)
+    rcvd_line = cs_received_line
+    dest_socket = client_socket
+    read_line: bytes = b''
+    read_str: str = ''
+    read_strip: str = ''
+    read_split: list[None | str, ...] = []
+    read_some: bytes
+    find_n: int = -1
     while True:
-        if len(bytes_data) == max_RECV:
-            await trio.sleep(1)
-        bytes_data: bytes = b''
-        if not is_socket(client_socket) or not is_socket(server_socket):
-            await trio.sleep(0)
-            return None
-        closed: bool = False
         try:
-            bytes_data = await client_socket.receive_some(max_RECV)
-        except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError):
-            closed = True
-        if not bytes_data:
-            if closed is False:
-                print("trio-ircproxy: client closed the socket.")
-            elif closed:
-                print('trio-ircproxy: server socket crashed.')
-            if client_socket in socket_data.mysockets:
-                try:
-                    await actions.send_quit(client_socket)
-                except:
-                    pass
+            read_sock = await dest_socket.receive_some(10000000)
+        except trio.BusyResourceError:
+            await trio.sleep(0.1)
+        except:
+            raise
+        if read_sock == b'':
+            raise EndSession('Connection closed')
+        read_line += read_sock
+        while True:
             await trio.sleep(0)
-            return None
-        bytes_cap += len(bytes_data)
-        if ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
-            socket_data.dcc_send[server_socket]) or \
-                ("mynick" in socket_data.dcc_chat[client_socket] and "othernick" in
-                 socket_data.dcc_chat[server_socket]):
-            actions.sc_send(server_socket, bytes_data)
-            await trio.sleep(0)
-            continue
-        byte_string += usable_decode(bytes_data)
-        byte_string: str = byte_string.replace('\r', '\n')
-        while '\n\n' in byte_string:
-            byte_string = byte_string.replace('\n\n', '\n')
-        find_n: int = byte_string.find('\n')
-        single_line: str
-        while find_n > -1:
-            single_line: str = byte_string[0:find_n + 1]
-            if single_line == '\n':
-                await cs_received_line(client_socket, server_socket, '\n', ['\n'])
-                find_n = byte_string.find('\n')
-                continue
-            single_line: str = single_line.lower()
-            split_line: list[str] = single_line.split(' ')
-            await cs_received_line(client_socket, server_socket, single_line, split_line)
-            try:
-                byte_string = byte_string[find_n + 1:]
-            except IndexError:
-                byte_string = ''
+            find_n = read_line.find(b'\n')
+            if find_n == -1:
                 break
-            find_n = byte_string.find('\n')
-        await trio.sleep(0)
+            read_some_found: int = len(read_line[0:find_n + 1])
+            read_some = read_line[0:find_n + 1]
+            #print(b'read some: ' + read_some)
+            read_str = usable_decode(read_some)
+            read_strip = lower_strip(read_str)
+            read_split = read_strip.split(' ')
+            await rcvd_line(client_socket, server_socket, read_str, read_split)
+            remain = read_line[read_some_found:]
+            read_line = remain
+            #print(b'remaining: ' + read_line)
+        if find_n == -1:
+            read_str = ''
+            read_strip = ''
+            read_split = []
+            read_sock = b''
+            find_n = -1
+        await trio.sleep(0.50)
 
-await def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
+
+async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                      server_socket: trio.SocketStream | trio.SSLStream,
-                     single_line: str, split_line: list[str]) \
-        -> None:
+                     single_line: str, split_line: list[str])-> None:
     """Client socket received a line of data.
             Vars:
                 :@param client_socket: client socket
@@ -976,86 +897,43 @@ await def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                 :@return: None
 
     """
-    if single_line == '':
-        actions.sc_send(server_socket, single_line)
+    dest_socket = server_socket
+    #print('CS got line: ' + repr(single_line))
+    relay = True
+    if single_line == '\n':
+        actions.sc_send(client_socket, single_line)
         return
-    if socket_data.dcc_null[client_socket] == True:
-        actions.sc_send(server_socket, single_line)
+    if not single_line.endswith('\n'):
+        print(' kk kk k LIVNE HAS NO ENDING nknknk')
+        await trio.sleep(0)
         return
     original_line = single_line
     single_line = single_line.lower()
-    if len(split_line) == 2 and socket_data.dcc_null[client_socket] is False:
-        if split_line[0] == "100" or split_line[0] == "101":
-            # 100 or 101 nickname
-            socket_data.dcc_chat[client_socket]["mynick"] = split_line[1]
-            socket_data.dcc_null[client_socket] = True
-            actions.sc_send(server_socket, original_line)
-            await trio.sleep(0)
-            return
-    elif len(split_line) >= 3 and socket_data.dcc_null[client_socket] is False:
-        if split_line[0] == "120" or split_line[0] == "121":
-            # 120 _ashbrry 1427104089 100.Days.to.Live.2021.HDRip.XviD.AC3-EVO.avi
-            socket_data.dcc_send[client_socket]["mynick"] = split_line[1]
-            socket_data.dcc_null[client_socket] = True
-            actions.sc_send(server_socket, original_line)
-            return
-    socket_data.dcc_null[client_socket] = None
+    split_line_low: list[str, ...] = single_line.split(' ')
+    split_line: list[str, ...] = original_line.split(' ')
 
-    if split_line[0] == 'nick' and len(split_line) == 2:
-        if socket_data.mynick[client_socket] == '*no_nick':
-            socket_data.mynick[client_socket] = split_line[1]
+    if split_line_low[0] == 'nick' and len(split_line) == 2:
+        socket_data.mynick[client_socket] = split_line[1].lstrip(':')
 
-    if split_line[0] == 'names':
-        chan = split_line[1].lstrip(':')
+    if split_line_low[0] == 'names':
+        chan = split_line_low[1].lstrip(':')
         ial.IALData.myial_count[client_socket][chan] = 0
-        if len(split_line) > 1:
-            await actions.sc_send(server_socket, 'names ' + split_line[1])
-        else:
-            await actions.sc_send(server_socket, 'names')
+        await actions.sc_send(dest_socket, original_line)
         await trio.sleep(0)
         return
-        #
-        # Erase above code or change to detect raw in ss_received_line
-        #
+
     len_split_line: int = len(split_line)
     if len_split_line < 2:
+        actions.sc_send(dest_socket, original_line)
         await trio.sleep(0)
         return None
-    if split_line[1] == 'pong' and len_split_line >= 3:
-        pong_str: str = split_line[2].lstrip(':')
-        if len(pong_str) < 10:
-            actions.sc_send(server_socket, original_line)
-            await trio.sleep(0)
-            return None
-        if pong_str.isdecimal():
-            pong: float = float(pong_str)
-            seconds: float = round(time() - pong, 2)
-            dur = duration(seconds=seconds)
-            dur_str: str = dur_replace(dur.in_words())
-            if time_last_pong == 0.0:
-                time_last_pong: float = seconds
-            else:
-                if (seconds - time_last_pong) > 2.4 or (seconds - time_last_pong) < -2.4:
-                    time_last_pong: float = seconds
-                    socket_data.echo(client_socket, 'Client Lag: ' + dur_str)
-            print('pong_str reached return None')
-            await trio.sleep(0)
-            return None
-
-    if split_line[1] == 'ping' and len(split_line) >= 3:
-        pong_str: str = str.strip(split_line[2].lstrip(':') + ' ' + ' '.join(split_line[3:]))
-        actions.sc_send(client_socket, 'PONG www.mslscript.com :' + pong_str)
-        actions.sc_send(server_socket, 'PING :' + str(time()))
-        await trio.sleep(0)
-        return None
-
     halt_on_yes: bool | None = False
-    if split_line[1].startswith('trio') or split_line[1].startswith('proxy') or \
-            split_line[1].startswith('xdcc'):
-        halt_on_yes = cs_rcvd_command(client_socket, server_socket, single_line, split_line)
+    if split_line_low[1].startswith('trio') or split_line_low[1].startswith('proxy') or \
+            split_line_low[1].startswith('xdcc') or split_line_low[1].startswith('py'):
+        halt_on_yes = cs_rcvd_command(client_socket, server_socket, original_line, split_line_low)
     if not halt_on_yes:
-        actions.sc_send(server_socket, original_line)
-        await trio.sleep(0)
+        actions.sc_send(dest_socket, original_line)
+    await trio.sleep(0)
     return None
 
 
@@ -1180,10 +1058,18 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
     if 'trio' in split_line[0] or 'proxy' in split_line[0]:
         proxy_commands.commands(client_socket, server_socket, single_line, split_line)
         return True
+    from url_desc.url_desc import get_url_desc
+    if (split_line[0] == '.url') and (len(split_line) == 2):
+        chan = sinle_line.split(' ')[1]
+        url, title, desc = get_url_desc(split_line[1].lstrip(':'))
+        chan = chan
+        actions.sc_send(server_socket, f'privmsg {chan} :URL: {url}')
+        actions.sc_send(server_socket, f'privmsg {chan} :Title: {title}')
+        actions.sc_send(server_socket, f'privmsg {chan} :Description: {desc}')
     return None
 
 
-def verify_login(auth_userlogin: str) -> bool | tuple[str, str] | bool:
+def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
     """Validate user: pass login attempt
 
         :@param auth_userlogin: The `user: pass` login attempt
@@ -1199,13 +1085,17 @@ def verify_login(auth_userlogin: str) -> bool | tuple[str, str] | bool:
         auth_user: str = auth_login[:auth_login.find(":")]
         auth_user: str = auth_user.strip()
         auth_user: str = auth_user.lower()
+        print('### PASS ' + auth_pass)
+        print('### USER ' + auth_user)
         if not auth_pass or not auth_user or len(auth_user) > 40 or len(auth_pass) > 40:
             return False
         if auth_login.count(":") > 1 or auth_login.count(':') < 1 or auth_login.count(" ") > 1 \
                 or verify_user_pwdfile(auth_user, auth_pass) is False:
+            print('BAD PASSWORD / BAD PASSWORD / BAD PASSWORD')
             return False
         return (auth_user, auth_pass)
     except ValueError:
+        print('BAD PASSWORD / BAD PASSWORD / BAD PASSWORD')
         return False
     finally:
         auth_pass = "a" * len(auth_pass)
@@ -1254,7 +1144,7 @@ async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[
         with trio.move_on_after(18):
             socket_data.echo(client_socket, "Disconnected, missing username/password "
                                             "attempt.")
-            await client_socket.send_all(b"407 You need an login to continue.\r\n")
+            await client_socket.send_all(b"407 You need an login to continue.\r\n\r\n")
             await client_socket.send_all(
                 b'WWW-Authenticate: Basic realm="trio-ircproxy user'
                 + b' realm", charset="UTF-8"\r\n\r\n'
@@ -1274,10 +1164,11 @@ async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[
     name: bool | tuple[str, str] = verify_login(auth_words_split[1])
     if not name:
         socket_data.echo(client_socket, "Disconnected, bad username/password attempt.")
-        with trio.move_on_after(15) as cancel_scope:
+        with trio.move_on_after(5) as cancel_scope:
             await client_socket.send_all(b"401 Unauthorized. Bad username/password"
                                          + b" attempt.\r\n\r\n")
         raise EndSession('bad username/password', client_socket)
+    print('%%%%% NAME : ' + str(name) + ' *******')
     return name
 
 
@@ -1335,14 +1226,15 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     """
     # Write down tries per minute for this IP. And just close them all if its too many.
     hostname: str = cs_before_connect.socket.getpeername()[0]
-    print(cs_before_connect)
+    print(hostname)
     if not check_fry_server(hostname):
         socket_data.clear_data(cs_before_connect)
         await aclose_sockets(sockets=(cs_before_connect,))
+        print (':::::: FRY_SERVER TRIGGERED ::::::')
         return None
     socket_data.hostname[cs_before_connect] = hostname
     port = f'{cs_before_connect.socket.getsockname()[1]}'
-    socket_data.echo(cs_before_connect, "Accepted a client connection on port " + str(port) + '...')
+    socket_data.echo(cs_before_connect, "Accepted a client connection " + hostname + " on port " + str(port) + '...')
     bytes_data: bytes
     byte_string: str = ""
     auth: bool | None | tuple[str, str]
@@ -1366,6 +1258,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             print("handler EXCEPT 1: " + str(exc.args))
             await aclose_both(cs_before_connect)
             socket_data.clear_data(cs_before_connect)
+            await trio.sleep(0)
             return
     try:
         byte_string = byte_string.strip()
@@ -1384,12 +1277,12 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         if len(lines) > 1:
             auth_list: list[str] = lines[1:]
             auth = await authenticate_proxy(cs_before_connect, auth_list)
-        if auth is False:
+        if not auth:
             return None
         print("-----------------------\n")
         print(f'AUTH={str(auth)}')
         socket_data.login[cs_before_connect] = auth[0]
-        # username and password login
+        print('LLLL username and password login ' + repr(auth[0]))
         if cs_before_connect not in socket_data.state:
             socket_data.state[cs_before_connect] = {}
             socket_data.state[cs_before_connect]['doing'] = "connecting"
@@ -1404,6 +1297,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         print("handler EXCEPT 2: " + str(exc.args))
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
+        raise
         # this is proxy_server_handler()
 
 
@@ -1423,7 +1317,7 @@ async def start_proxy_listener():
                 nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(f))
                 print("proxy is ready, listening on port " + str(f))
             print("press Ctrl+C to quit...\n")
-    except (EndSession, BaseException, BaseExceptionGroup, Exception, \
+    except (EndSession, BaseException, BaseExceptionGroup, Exception,
             KeyboardInterrupt, OSError, gaierror) as exc:
         if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):
             print(
@@ -1434,6 +1328,7 @@ async def start_proxy_listener():
             await quit_all()
         print("EXC: " + str(exc.args))
         print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
+        raise
         # try:
         #    sys.exit(13)
         # except SystemExit:
@@ -1468,3 +1363,77 @@ def begin_server() -> None:
 
 if __name__ == "__main__":
     begin_server()
+
+async def __2__cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
+                            server_socket: trio.SocketStream | trio.SSLStream) -> None:
+    """
+    Receive a chunk of data and call cs_received_line() when atleast one line has completed
+    @param client_socket: the socket to the irc-client
+    @param server_socket: the socket to the irc-server
+    @return: None.
+
+    """
+    bytes_cap: int = 0
+    bytes_string: str = ''
+    max_RECV: int = 355350000
+    bytes_data: bytes = b''
+    await trio.sleep(0)
+    while True:
+        bytes_read = b''
+        if not is_socket(client_socket) or not is_socket(server_socket):
+            await trio.sleep(0)
+            return None
+        closed: bool = False
+        try:
+            bytes_read = await client_socket.receive_some(max_RECV)
+        except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError):
+            closed = True
+        if not bytes_read:
+            if closed is False:
+                print("trio-ircproxy: client closed the socket.")
+            elif closed:
+                print('trio-ircproxy: server socket crashed.')
+            if client_socket in socket_data.mysockets:
+                try:
+                    # await actions.send_quit(client_socket)
+                    break
+                except:
+                    pass
+            await trio.sleep(0)
+            return None
+        bytes_data += bytes_read
+        bytes_read = b''
+        if ("mynick" in socket_data.dcc_send[client_socket] and "othernick" in
+            socket_data.dcc_send[server_socket]) or \
+                ("mynick" in socket_data.dcc_chat[client_socket] and "othernick" in
+                 socket_data.dcc_chat[server_socket]):
+            actions.sc_send(server_socket, bytes_read)
+            await trio.sleep(0)
+            continue
+        bytes_string: str = usable_decode(bytes_data)
+        bytes_string = bytes_string.replace('\r', '\n')
+        while '\n\n' in bytes_string:
+            bytes_string = bytes_string.replace('\n\n', '\n')
+        find_n: int = bytes_string.find('\n')
+        single_line: str = ''
+        while find_n > -1:
+            single_line = bytes_string[0:find_n + 1]
+            single_line_low: str = single_line.lower().strip()
+            split_line_low: list[str] = single_line_low.split(' ')
+            await cs_received_line(client_socket, server_socket, single_line, split_line_low)
+            try:
+                single_line = bytes_string[find_n+1:]
+            except IndexError:
+                single_line = ''
+                bytes_data = b''
+                break
+            find_n = single_line.find('\n')
+            if find_n == -1:
+                single_line = ''
+                bytes_data = b''
+                break
+            else:
+                bytes_string = single_line[find_n + 1:]
+                continue
+        await trio.sleep(0)
+        continue

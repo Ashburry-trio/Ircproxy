@@ -20,15 +20,15 @@ def dur_replace(in_words: str) -> str:
 def commands(client_socket, server_socket, single_line, split_line) -> None:
     command = split_line[0]
     if fnmatch(command, '*test*'):
-        circular.msg('This is kis a trst')
+        actions.msg('This is kis a trst')
         return
     if fnmatch(command, '*new*user*'):
         if len(split_line) < 4 or len(split_line) > 4:
-            circular.sc_send(client_socket, 'Syntax: /proxy-new-user <username> <password> <email>')
+            actions.sc_send(client_socket, 'Syntax: /proxy-new-user <username> <password> <email>')
         try:
             add_new_user(split_line[1], split_line[2])
         except ValueError as exc:
-            circular.sc_send(client_socket, "Error: " + exc.args[1])
+            actions.send_msg_to_client(client_socket, "Error: " + exc.args[1])
             return
 
         return

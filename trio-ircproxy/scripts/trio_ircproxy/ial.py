@@ -5,7 +5,6 @@ from __future__ import annotations
 from fnmatch import fnmatch
 from typing import Union, List, Dict, Set
 from threading import Timer
-from scripts.trio_ircproxy import circular
 import trio
 
 class IALData:

@@ -58,6 +58,7 @@ def send_join(server_socket: trio.SocketStream | trio.SSLStream, chan_with_key: 
     circular.sc_send(server_socket, "join :" + chan_with_key)
     return None
 
+
 def ss_version_reply(nick) -> str:
     """The version reply sent to the server, just the text.
     @rtype: str
@@ -115,11 +116,13 @@ def ss_send_ctcp(server_socket: trio.SocketStream | trio.SSLStream, nick: str, c
         :@return: None
 
     """
-    if not server_socket:
+    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+            or not ctcp or not nick or not isinstance(nick, str) or not isinstance(ctcp, str):
         return None
     ctcp_send = "PRIVMSG " + nick + " " + ":\x01" + ctcp + "\x01"
     sc_send(server_socket, ctcp_send)
     return None
+
 
 def send_ping(sc_socket: trio.SocketStream | trio.SSLStream, msg: str = ':TIMEOUTCHECK') -> None:
     if len(msg) == 0:
@@ -127,6 +130,7 @@ def send_ping(sc_socket: trio.SocketStream | trio.SSLStream, msg: str = ':TIMEOU
     if msg[0] != ':':
         msg = ':' + msg
     sc_send(sc_socket, str('PING ' + msg).strip())
+    return None
 
 async def send_quit(sc_socket):
     from ..website_and_proxy.socket_data import SocketData
@@ -149,7 +153,7 @@ async def send_quit(sc_socket):
     try:
         sc_send(other_socket, quitmsg())
     except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
-                ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
+            ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
         return
     try:
         sc_send(client_socket, quitmsg(to=client_socket))
@@ -176,7 +180,6 @@ def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> str:
     return msg
 
 
-
 def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
     """Send a server notice to the irc-client
     vars:
@@ -185,11 +188,13 @@ def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> 
         :@return: None
 
     """
-    if not client_socket or not msg:
+    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+            or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
         return None
     msg = ":*mg-script!trio-ircproxy@www.mslscript.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
     sc_send(client_socket, msg)
     return None
+
 
 def ss_send_msg(server_socket: trio.SocketStream | trio.SSLStream, nick: str, msg: str) -> None:
     """Send an msg to the nickname
@@ -200,8 +205,9 @@ def ss_send_msg(server_socket: trio.SocketStream | trio.SSLStream, nick: str, ms
         :@return: None
 
     """
-    if not server_socket or not nick or not msg:
-        return None
+    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+            or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
+        return
     msg = "PRIVMSG " + nick + " :" + msg
     circular.sc_send(server_socket, msg)
     return None
@@ -216,14 +222,18 @@ def ss_send_notice(server_socket: trio.SocketStream | trio.SSLStream, nick: str,
         :@return: None
 
     """
-    if not server_socket or not nick or not msg:
+    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+            or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
         return None
     msg = f"NOTICE {nick} :{msg}"
     sc_send(server_socket, msg)
     return None
+
+
 1
 
-def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
+
+def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, nick: str, msg: str) -> None:
     """Send a server notice to the irc-client
     vars:
         :@param client_socket: the socket to the irc-client
@@ -231,5 +241,18 @@ def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, msg: str) 
         :@return: None
 
     """
+    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+            or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
+        return None
     msg = f":*mg-script!trio-ircproxy@www.mslscript.com NOTICE {nick} :{msg}"
     sc_send(client_socket, msg)
+    return None
+
+def msg_to_client(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
+    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+            or not msg or not isinstance(msg, str):
+        return None
+    msg = "*mg-script!msg-script@www.mslscript.com + privmsg" \
+          + socket_data.mynick[client_socket] + " :" + msg
+    sc_send(client_socket, msg)
+    return None
