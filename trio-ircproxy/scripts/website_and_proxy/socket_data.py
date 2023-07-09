@@ -10,10 +10,23 @@ from typing import Dict, Deque, Set
 from system_data import SystemData as system_data
 from socket import gaierror
 
+
+def yes_no(msg: str = ''):
+    if not msg:
+        return False
+    msg = str(msg).lower()
+    if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
+            or msg == 'true' or msg == 'allow' or msg == 'sure' or msg == 'fine'\
+            or msg.startswith('affirm') or msg == '*':
+        return True
+    else:
+        return False
+
+
 system_data.load_settings()
 
 
-async def aclose_sockets(sockets=None) -> None:
+async def aclose_sockets(sockets: tuple[trio.SocketStream | trio.SSLStream | None, ...] = (None,)) -> None:
     """Takes a list of sockets and closes them
 
         vars:
@@ -21,20 +34,23 @@ async def aclose_sockets(sockets=None) -> None:
             :returns: None
     """
     if not sockets:
-        return
+        return None
     for sock in sockets:
         if not sock:
             continue
         try:
-            await sock.aclose()
+            with trio.fail_after(7):
+                await sock.aclose()
         except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError, BaseException):
             pass
+        except trio.TooSlowError:
+            await trio.aclose_forcefully(sock)
         try:
             del SocketData.mysockets[sock]
         except KeyError:
             pass
-
-
+    await trio.sleep(0)
+    return None
 class SocketData:
     current_count: Dict[trio.SocketStream | trio.SSLStream | None, int | None]
     send_buffer: Dict[trio.SocketStream | trio.SSLStream | None, Deque[str | bytes | None]] = {}
@@ -100,19 +116,22 @@ class SocketData:
         cls.state[client_socket]['connected'] = 0
         cls.state[client_socket]['doing'] = 'connecting'
         cls.state[client_socket]['upper_nick'] = ''
-        cls.state[client_socket]['motd_def'] = 1 if system_data.Settings_ini['settings']['skip_motd'].lower() in \
-                                                    ('yes', 'on', 'y', '1', 'ok', 'okay', 'allow') else 0
+        cls.state[client_socket]['motd_def'] = yes_no(system_data.Settings_ini['settings']['skip_motd'])
+
     @classmethod
     async def raw_send(cls, to_socket: trio.SocketStream | trio.SSLStream,
-                       other_socket: trio.SocketStream | trio.SSLStream | None, msg: str | bytes) -> bool:
-        with trio.fail_after(45):
+                       other_socket: trio.SocketStream | trio.SSLStream | None | False = None,
+                       msg: str | bytes = '') -> bool:
+        if not msg:
+            return False
+        with trio.fail_after(20):
             try:
-                await to_socket.send_all(bytes(msg))
-            except (
-                    trio.BrokenResourceError, trio.ClosedResourceError, gaierror, trio.TooSlowError,
-                    trio.BusyResourceError, OSError):
-                await aclose_sockets(sockets=(to_socket, other_socket))
-                trio.sleep(0)
+                await trio.sleep(0)
+                if not isinstance(msg, bytes):
+                    msg = msg.encode()
+                await to_socket.send_all(msg)
+            except (trio.BrokenResourceError, trio.ClosedResourceError, gaierror,
+                    trio.TooSlowError, OSError, trio.BusyResourceError):
                 return False
             return True
 

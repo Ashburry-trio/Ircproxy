@@ -10,6 +10,18 @@ user_file_str: str = os.path.join('.', 'scripts', 'website_and_proxy', 'users.da
 user_file = Path(user_file_str)
 
 
+def yes_no(msg: str = ''):
+    if not msg:
+        return False
+    msg = str(msg).lower()
+    if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
+            or msg == 'true' or msg == 'allow' or msg == 'sure' or msg == 'fine'\
+            or msg.startswith('affirm') or msg == '*':
+        return True
+    else:
+        return False
+
+
 def sc_send(sc_socket: trio.SocketStream | trio.SSLStream, msg: str | bytes) -> None:
     """Relay text to client
     """
@@ -209,7 +221,7 @@ def ss_send_msg(server_socket: trio.SocketStream | trio.SSLStream, nick: str, ms
             or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
         return
     msg = "PRIVMSG " + nick + " :" + msg
-    circular.sc_send(server_socket, msg)
+    sc_send(server_socket, msg)
     return None
 
 

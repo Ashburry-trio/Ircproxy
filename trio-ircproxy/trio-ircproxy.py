@@ -251,14 +251,14 @@ def usable_decode(text: bytes) -> str:
     try:
         decoded_text: str
         decoded_text = text.decode("utf8")
-    except (UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
+    except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
         try:
             decoded_text = text.decode("latin1")
-        except (UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
+        except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
             try:
                 det = detect(text)
                 decoded_text = text.decode(det['encoding'], errors="replace")
-            except (UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
+            except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
                 return ''
     return decoded_text
 
@@ -693,8 +693,8 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             read_sock = await dest_socket.receive_some(10000000)
         except trio.BusyResourceError:
             await trio.sleep(0.1)
-        except:
-            raise
+        except trio.BrokenResourceError:
+            raise EndSession('irc server forcefully closed the connection')
         if read_sock == b'':
             raise EndSession('Connection closed')
         read_line += read_sock
@@ -707,6 +707,7 @@ async def ss_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             read_some = read_line[0:find_n + 1]
             #print(b'read some: ' + read_some)
             read_str = usable_decode(read_some)
+            read_str = read_str.strip()
             read_strip = lower_strip(read_str)
             read_split = read_strip.split(' ')
             await rcvd_line(client_socket, server_socket, read_str, read_split)
@@ -740,8 +741,11 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     #print('SS got line: '+repr(single_line))
     original_line = single_line
     single_line = single_line.lower()
-    if len(split_line) == 0:
-        print('ooooo ZERO BYTES ooooo')
+    if 'test' in single_line:
+        actions.sc_send(dest_socket, original_line)
+    if not split_line:
+        actions.sc_send('\n')
+        return
 
     if check_mirc_exploit(original_line) is True:
         await exploit_triggered(client_socket, server_socket)
@@ -869,7 +873,7 @@ async def cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
             read_some_found: int = len(read_line[0:find_n + 1])
             read_some = read_line[0:find_n + 1]
             #print(b'read some: ' + read_some)
-            read_str = usable_decode(read_some)
+            read_str = usable_decode(read_some).strip()
             read_strip = lower_strip(read_str)
             read_split = read_strip.split(' ')
             await rcvd_line(client_socket, server_socket, read_str, read_split)
@@ -899,14 +903,14 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     """
     dest_socket = server_socket
     #print('CS got line: ' + repr(single_line))
-    relay = True
-    if single_line == '\n':
-        actions.sc_send(client_socket, single_line)
+    if single_line == '':
+        actions.sc_send(server_socket, '\n')
         return
-    if not single_line.endswith('\n'):
+    if single_line.endswith('\n'):
         print(' kk kk k LIVNE HAS NO ENDING nknknk')
         await trio.sleep(0)
         return
+
     original_line = single_line
     single_line = single_line.lower()
     split_line_low: list[str, ...] = single_line.split(' ')
