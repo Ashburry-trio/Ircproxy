@@ -9,7 +9,7 @@ from ..website_and_proxy.socket_data import SocketData as socket_data
 user_file_str: str = os.path.join('.', 'scripts', 'website_and_proxy', 'users.dat')
 user_file = Path(user_file_str)
 
-
+# Duplicated in ..website_and_proxy.socket_data.yes_no()
 def yes_no(msg: str = ''):
     if not msg:
         return False

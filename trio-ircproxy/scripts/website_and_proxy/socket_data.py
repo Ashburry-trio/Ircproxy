@@ -10,17 +10,17 @@ from typing import Dict, Deque, Set
 from system_data import SystemData as system_data
 from socket import gaierror
 
-
+# Duplicated in ..trio_ircproxy.actions.yes_no()
 def yes_no(msg: str = ''):
     if not msg:
-        return False
+        return 0
     msg = str(msg).lower()
     if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
             or msg == 'true' or msg == 'allow' or msg == 'sure' or msg == 'fine'\
             or msg.startswith('affirm') or msg == '*':
-        return True
+        return 1
     else:
-        return False
+        return 0
 
 
 system_data.load_settings()
@@ -124,7 +124,7 @@ class SocketData:
                        msg: str | bytes = '') -> bool:
         if not msg:
             return False
-        with trio.fail_after(20):
+        with trio.fail_after(40):
             try:
                 await trio.sleep(0)
                 if not isinstance(msg, bytes):
