@@ -456,10 +456,10 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     upper_nick_src: str
     upper_nick_full_src: str
     original_line: str = single_line
-    orig_upper_split: list[str] = original_line.split(' ')
-    split_line: list[str, ...] = original_line.lower().split()
-    nick_src: str = original_line.split(' ')[0].lower()
-    src_nick_full: str
+    orig_upper_split: list[str] = single_line.split(' ')
+    split_line: list[str, ...] = single_line.lower().split()
+    nick_src: str = single_line.split(' ')[0].split('!')[0].lower()
+    src_nick_full: str = single_line.split(' ')[0].lower()
     upper_nick_src: str
     upper_nick_dest: str
     old_nick: str
@@ -512,11 +512,13 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
             ial.IALData.myial_count[client_socket][chan] -= 1
     if split_line[0] == "join":
         chan = orig_upper_split[1].lower()
-        if len(orig_upper_split) == 3:
-            keyword = orig_upper_split[2].lstrip(':')
         chan = chan.lstrip(':')
         my_usernick = socket_data.mynick[client_socket]
         if nick_src != my_usernick:
+            if client_socket not in ial.IALData.myial_count:
+                ial.IALData.myial_count[client_socket] = {}
+            if chan not in ial.IALData.myial_count[client_socket]:
+                ial.IALData.myial_count[client_socket][chan] = 1
             ial.IALData.myial_count[client_socket][chan] += 1
         ial.IALData.ial_add_nick(client_socket, nick_src, src_nick_full, chan)
         if nick_src == my_usernick:
@@ -1181,7 +1183,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             await aclose_both(cs_before_connect)
             socket_data.clear_data(cs_before_connect)
             await trio.sleep(0)
-            return
+            raise
     try:
         byte_string = byte_string.strip()
         byte_string = byte_string.replace("\r", "\n")
@@ -1218,7 +1220,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         print("handler EXCEPT 3: " + str(exc.args))
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
-        return
+        raise
     except (BaseException) as exc:
         print("handler EXCEPT 2: " + str(exc.args))
         await aclose_both(cs_before_connect)
@@ -1321,7 +1323,7 @@ async def __2__cs_received_chunk(client_socket: trio.SocketStream | trio.SSLStre
                 print('trio-ircproxy: server socket crashed.')
             if client_socket in socket_data.mysockets:
                 try:
-                    # await actions.send_quit(client_socket)
+                    await actions.send_quit(client_socket)
                     break
                 except:
                     pass

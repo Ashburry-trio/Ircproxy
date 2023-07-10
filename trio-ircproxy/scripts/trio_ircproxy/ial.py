@@ -6,6 +6,22 @@ from fnmatch import fnmatch
 from typing import Union, List, Dict, Set
 from threading import Timer
 import trio
+from socket_data import SocketData as socket_data
+
+def sc_send(sc_socket: trio.SocketStream | trio.SSLStream, msg: str | bytes) -> None:
+    """Relay text to client
+    """
+    if not sc_socket:
+        return
+    if not isinstance(msg, bytes):
+        msg = msg.encode("utf8", errors="replace")
+    msg = msg.strip()
+    msg = msg + b"\n"
+    try:
+        send_buffer = socket_data.send_buffer[sc_socket]
+    except KeyError:
+        return
+    send_buffer.append(msg)
 
 class IALData:
     myial: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = dict()
@@ -16,7 +32,7 @@ class IALData:
 
     @classmethod
     def sendwho(cls, server_socket: trio.SocketStream | trio.SSLStream, th: Timer, chan: str):
-        circular.sc_send(server_socket, 'who ' + chan)
+        sc_send(server_socket, 'who ' + chan)
         cls.timers.remove(th)
 
     @classmethod
