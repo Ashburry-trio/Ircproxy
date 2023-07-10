@@ -363,7 +363,8 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             server_socket: trio.SSLStream = await trio.open_ssl_over_tcp_stream(ss_hostname, port,
                                                 https_compatible=False, ssl_context=None, happy_eyeballs_delay=0.28)
         else:
-            server_socket = await trio.SocketStream(ss_hostname, port)
+            server_socket = await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.28)
+
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ':' + str(port)
 
@@ -739,7 +740,6 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         await trio.sleep(0)
         return None
     if original_line[0] == '@':
-        print('@@@@@@@ '+original_line+' @@@@')
         if not single_line.startswith('@time') and not single_line.startswith('@account'):
             print('Line starts with an ew @ sign text')
             print('@@@@@@ @@@ @ @ ' + original_line)
