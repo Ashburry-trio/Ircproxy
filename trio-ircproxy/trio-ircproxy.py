@@ -55,6 +55,8 @@ I need to create an install script for Linux and the runproxy.bat for Linux
 
 from __future__ import annotations
 
+import ssl
+
 import trio
 from base64 import b64decode
 from configparser import ConfigParser
@@ -177,7 +179,7 @@ def check_mirc_exploit(proto: str) -> bool:
     proto = proto.lower()
     proto_split: list[str,...] = proto.split(' ')
     nick: bool = False
-    if len(proto_split) > 1 and proto_split[1] == '004':
+    if len(proto_split) > 1 and (proto_split[1] == '004' or proto_split[1] == '322'):
         return False
     if (len(proto_split) > 1 and proto_split[1] == 'nick') or proto_split[0] == 'nick':
         nick = True
@@ -186,7 +188,7 @@ def check_mirc_exploit(proto: str) -> bool:
             return False
         if ord(let) in (1, 3, 31, 2, 22, 10, 13, 15, 33, 42):
             continue
-        if ord(let) < 29 or ord(let) > 500:
+        if ord(let) < 29 or ord(let) > 10000:
             return True
     return False
 
@@ -361,8 +363,17 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
     try:
         if port in (6697, 9999, 443, 6699, 6999, 7070) \
                 or (port == 7000 and ss_hostname != 'irc.dal.net') and ss_hostname != 'irc.undernet.org':
+            crt_path = os.path.join(os.path.abspath('..'), 'client.crt')
+            key_path = os.path.join(os.path.abspath('..'), 'client.key')
+            server_cert = os.path.join(os.path.abspath('..'), 'server.crt')
+            # crt_path = os.path.join(os.path.abspath('..'), '.')
+            # key_path = os.path.join(os.path.abspath('..'), '.')
+            # server_cert = os.path.join(os.path.abspath('..'), '.')
+
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2, cafile=server_cert)
+            ssl_context.load_cert_chain(certfile=crt_path, keyfile=key_path)
             server_socket: trio.SSLStream = await trio.open_ssl_over_tcp_stream(ss_hostname, port,
-                                                https_compatible=False, ssl_context=None, happy_eyeballs_delay=0.15)
+                                                https_compatible=False, ssl_context=ssl_context, happy_eyeballs_delay=0.15)
         else:
             server_socket: trio.SocketStream = await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.15)
         socket_data.create_data(client_socket, server_socket)
@@ -740,6 +751,7 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         return
 
     if check_mirc_exploit(original_line) is True:
+        print(original_line)
         await exploit_triggered(client_socket, server_socket)
         await trio.sleep(0)
         return None
@@ -1231,6 +1243,9 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
         raise
+    except trio.ClosedResourceError:
+        await aclose_both(cs_before_connect)
+        socket_data.clear_data(cs_before_connect)
     except (BaseException) as exc:
         print("handler EXCEPT 2: " + str(exc.args))
         await aclose_both(cs_before_connect)

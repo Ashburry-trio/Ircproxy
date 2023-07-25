@@ -6,14 +6,15 @@ if "%~1"=="-FIXED_CTRL_C" (
 ) ELSE (
    REM Run the batch with <NUL and -FIXED_CTRL_C
    CALL <NUL %0 -FIXED_CTRL_C %*
-   GOTO :EOF
+   GOTO EOF
 )
 echo.
 echo Starting trio-ircproxy.py in virtual-environment.
 echo While this window is open, the proxy server will
 echo be available and running.
 echo.
-echo Running ".\trio-ircproxy\activate.bat" and "python.exe .\trio-ircproxy\trio-ircproxy.py"
+echo Running ".\activate.bat" and "python.exe .\trio-ircproxy\trio-ircproxy.py"
+echo please wait...
 IF EXIST ".\activate.bat" (
     call ".\activate.bat"
     goto end1
@@ -27,8 +28,8 @@ IF EXIST ".\activate.bat" (
         call "%UserProfile%\trio-ircproxy-main\activate.bat"
         goto end1
 )
-echo ERROR, unable to find activate.bat
-goto f
+echo ERROR, unable to find "activate.bat"
+goto done
 :end1
 IF EXIST "trio-ircproxy\trio-ircproxy.py" (
     python.exe trio-ircproxy\trio-ircproxy.py
@@ -42,13 +43,12 @@ IF EXIST "trio-ircproxy\trio-ircproxy.py" (
 ) ELSE IF EXIST "%UserProfile%\trio-ircproxy-main\trio-ircproxy\" (
         python.exe "%UserProfile%\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
+) ELSE IF EXIST "%UserProfile%\trio-ircproxy\trio-ircproxy\" (
+        python.exe "%UserProfile%\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+        goto done
 )
-echo Unable to find trio-ircproxy.py
-:end
-echo.
-python.exe "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
-pause
+echo ERROR, Unable to find "trio-ircproxy.py"
 :done
 call "deactivate.bat"
-:f
+echo finished "deactivate.bat"
 :EOF
