@@ -37,4 +37,5 @@
 %bde_glob_network-link#blank 1
 %bde_glob_network-link##5ioE 0
 %var testing
-%bde_glob_topic_history_#python#1687927920 Python programming chat. Casual and unofficial.
+%bde_glob_topic_history_#python#1689071702 Anything Python is on-topic. | Don't paste, use https://bpa.st/+python | Questions about this channel? https://www.pound-python.org | CoC: https://j.mp/psf-coc | Tutorial: https://j.mp/PyTut | New programmer? https://j.mp/23X7emF | Ops: #python-ops
+%bde_glob_allow_bad_script_ban#freenode#5ioE $true

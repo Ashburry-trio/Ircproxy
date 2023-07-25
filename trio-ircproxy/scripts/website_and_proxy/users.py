@@ -9,14 +9,17 @@ from os import path
 _dir = path.dirname(path.abspath(__file__))
 user_file: Path = Path(path.join(_dir, "users.dat"))
 
-def status_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str):
+def status_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
     if not msg:
-        return
+        return None
+    msg = msg.strip()
+    if not msg.startswith(':'):
+        msg = ':' + msg
     from scripts.website_and_proxy.socket_data import SocketData
-    msg = ':~STATUS!trio-ircproxy.py@mgscript.com PRIVMSG ' + SocketData.mynick[client_socket] + ' '+msg + '\n'
+    msg = ':*mg-script!trio-ircproxy.py@www.mslscript.com PRIVMSG ' + SocketData.mynick[client_socket] + ' '+msg + '\r\n'
     if client_socket in SocketData.send_buffer:
         SocketData.send_buffer[client_socket].append(msg)
-
+    return None
 
 
 
@@ -68,19 +71,21 @@ def validate_login(name: str, email: str, password: str):
 
 
 def verify_user_pwdfile(name: str, password: str) -> bool | str:
-    password = sha256(bytes(password.encode("utf8"))).hexdigest()
+    password = sha256(password.encode("utf8")).hexdigest()
     if exists(user_file):
         with open(user_file, 'r') as sfopen:
             sfread: str = sfopen.read().strip()
             sfread_list: List[str] = sfread.split('\n')
         i = 0
         line: str
-        line_split: List[str]
+        line_split: List[str, ...]
         for line in sfread_list:
             line = line.strip()
             if ':' not in line:
                 continue
             line_split = line.split(':')
+            if len(line_split) < 4:
+                continue
             if line_split[0] == name.lower():
                 if line_split[3] == password:
                     return line_split[2]
@@ -90,8 +95,7 @@ def verify_user_pwdfile(name: str, password: str) -> bool | str:
 
 
 def add_new_user(name: str, email: str, password: str, /, account_power: str = 'normal', *, force: bool = False) -> bool:
-    name = name.lower()
-    login: str = name + ':' + email + ':' + account_power + ':' + sha256(bytes(password.encode('utf8'))).hexdigest()
+    login: str = name.lower() + ':' + email.lower() + ':' + account_power.lower() + ':' + sha256(bytes(password.encode('utf8'))).hexdigest()
     added_user: bool = False
     sfread_list: List[str] = []
     if exists(user_file):

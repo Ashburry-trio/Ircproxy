@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 from fnmatch import fnmatch
 from . import circular
 from pendulum import duration

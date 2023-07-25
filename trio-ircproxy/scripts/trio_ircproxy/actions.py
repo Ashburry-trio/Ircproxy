@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+
 from pathlib import Path
 import trio
 import os
@@ -30,7 +31,7 @@ def sc_send(sc_socket: trio.SocketStream | trio.SSLStream, msg: str | bytes) -> 
     if not isinstance(msg, bytes):
         msg = msg.encode("utf8", errors="replace")
     msg = msg.strip()
-    msg = msg + b"\n"
+    msg = msg + b"\r\n"
     try:
         send_buffer = socket_data.send_buffer[sc_socket]
     except KeyError:

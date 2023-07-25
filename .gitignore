@@ -3,6 +3,7 @@
 *deploy*
 *.pem
 *.key
+*.crt
 
 venv/
 #backups
