@@ -68,7 +68,7 @@ def send_join(server_socket: trio.SocketStream | trio.SSLStream, chan_with_key: 
     """
     if not server_socket:
         return None
-    circular.sc_send(server_socket, "join :" + chan_with_key)
+    sc_send(server_socket, "join :" + chan_with_key)
     return None
 
 
@@ -100,7 +100,7 @@ def ss_send_version_reply(any_sock: trio.SocketStream | trio.SSLStream, to_nick:
     ss_socket = any_sock
     if socket_data.which_socket[ss_socket] == 'cs':
         ss_socket = socket_data.mysockets[any_sock]
-    actions.sc_send(ss_socket, ss_version_reply(to_nick))
+    sc_send(ss_socket, ss_version_reply(to_nick))
 
 
 def ss_send_ctcpreply(server_socket: trio.SocketStream | trio.SSLStream, nick: str, ctcp: str, reply_str: str) -> None:
@@ -116,7 +116,7 @@ def ss_send_ctcpreply(server_socket: trio.SocketStream | trio.SSLStream, nick: s
     if not server_socket:
         return None
     ctcp_reply = f"NOTICE {nick} :\x01{ctcp} {reply_str}\x01"
-    circular.sc_send(server_socket, ctcp_reply)
+    sc_send(server_socket, ctcp_reply)
     return None
 
 
