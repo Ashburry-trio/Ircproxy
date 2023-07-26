@@ -432,24 +432,25 @@ async def write_loop(client_socket: trio.SocketStream |
         :@return: None
 
     """
+    line: str
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
-        try:
-            line = str(usable_decode(send_buffer.popleft()).strip())
-        except IndexError:
-            await trio.sleep(0.250)
-            continue
-        line += "\r\n"
-        line = line.encode("utf-8", errors="replace")
+        if not line:
+            try:
+                line = str(usable_decode(send_buffer.popleft()).strip())
+            except IndexError:
+                await trio.sleep(0.250)
+                line = ''
+                continue
+            line += "\r\n"
+            line = line.encode("utf-8", errors="replace")
         with trio.fail_after(150):
             try:
                 if which_sock == 'cs':
-                    if b'PING' in line or b'PONG' in line:
-                        print(b'cs wloop: ' + line)
                     await client_socket.send_all(line)
+                    line = ''
                 else:
-                    if b'PING' in line or b'PONG' in line:
-                        print(b'ss wloop: '+line)
                     await server_socket.send_all(line)
+                    line = ''
             except (trio.BusyResourceError,):
                 await trio.sleep(0.210)
                 continue
