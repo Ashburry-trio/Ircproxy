@@ -432,35 +432,33 @@ async def write_loop(client_socket: trio.SocketStream |
         :@return: None
 
     """
-    line: str
+    line: bytes
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
         if not line:
             try:
-                line = str(usable_decode(send_buffer.popleft()).strip())
+                line = usable_decode(send_buffer.popleft()).strip().encode('utf-8', errors='replace')
             except IndexError:
                 await trio.sleep(0.250)
-                line = ''
+                line = b''
                 continue
-            line += "\r\n"
-            line = line.encode("utf-8", errors="replace")
-        with trio.fail_after(150):
+            line += b"\r\n"
+        with trio.fail_after(28):
             try:
                 if which_sock == 'cs':
                     await client_socket.send_all(line)
-                    line = ''
                 else:
                     await server_socket.send_all(line)
-                    line = ''
+                line = b''
+                continue
             except (trio.BusyResourceError,):
-                await trio.sleep(0.210)
+                await trio.sleep(0.120)
                 continue
             except (trio.BrokenResourceError, trio.ClosedResourceError, gaierror,
                     trio.TooSlowError, OSError, BaseException) as exc:
                 print('write error! ' + which_sock + ' ' + str(exc) + ' '
                       + str(exc.args) + ' LINE: ' + str(line))
-                #raise EndSession('Write Error. ' + which_sock + ' ' + str(line))
-                raise
-            await trio.sleep(0)
+                raise EndSession('Write Error. ' + which_sock + ' ' + str(line))
+        await trio.sleep(0)
 
 
 
@@ -478,7 +476,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
         :@param single_line: the single string line with uppercase for relay to irc-client
         :@param client_socket: trio.SocketStream | trio.SSLStream client socket
         :@param server_socket: trio.SocketStream | trio.SSLStream server socket
-        :@return: bool or None. False if silenced or None if relayed to client.
+        :@return: bool or SNone. False if silenced or None if relayed to client.
 
     """
     newnick: str
