@@ -287,12 +287,15 @@ def get_words(text: str) -> list:
     try:
         text = text.strip()
         lower_string: str = text.lower()
-        lower_string = lower_string.replace("\r", "")
-        lower_string = lower_string.replace("\f", "")
-        lower_string = lower_string.replace("\t", "")
+        while '\r' in lower_string:
+            lower_string = lower_string.replace("\r", "")
+        while '\f' in lower_string:
+            lower_string = lower_string.replace("\f", "")
+        while '\t' in lower_string:
+            lower_string = lower_string.replace("\t", "")
         return lower_string.split(' ')
     except (ValueError, TypeError):
-        return ['', ]
+        return ['']
 
 
 async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream

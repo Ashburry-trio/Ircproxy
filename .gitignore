@@ -1,17 +1,17 @@
-*.idea*
+*.idea\*
 *.chm
 *deploy*
 *.pem
 *.key
 *.crt
 
-venv/
+*venv*
 #backups
 *.bak
 *.backup
 # enormous .git directory
-.git\
-
+.git*
+.github*
 # enormous dump files
 *.DMP
 
@@ -20,6 +20,7 @@ bin/
 lib/
 lib64/
 __pycache__/
+__pycache__\
 .mypy_cache/
 .mypy_cache/3.10/
 .mypy_cache/3.7/
