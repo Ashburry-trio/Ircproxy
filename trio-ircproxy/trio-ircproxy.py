@@ -860,7 +860,7 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     single_line = single_line.lower()
     split_line_low: list[str, ...] = single_line.split(' ')
     split_line: list[str, ...] = original_line.split(' ')
-
+    print(original_line)
     if split_line_low[0] == 'nick' and len(split_line) == 2:
         socket_data.mynick[client_socket] = split_line[1].lstrip(':')
 
@@ -1250,7 +1250,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         print("handler EXCEPT 3: " + str(exc.args))
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
-        raise
+
     except trio.ClosedResourceError:
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)

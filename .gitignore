@@ -4,6 +4,7 @@
 *.pem
 *.key
 *.crt
+*\users\*
 
 *venv*
 #backups

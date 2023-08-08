@@ -23,13 +23,13 @@ Issues (requests) List :
 -   type in the input box **cmd.exe** and press **Enter**
 
 -   Extract **trio-ircproxy-main.zip** by typing at the prompt **cd
-    %UserProfile%\\Downloads **and then **unzip trio-ircproxy-main.zip -d
-    %UserProfile%\\Documents\\ **or use your favorite zip application such as
+    %UserProfile%\\Downloads** and then **unzip trio-ircproxy-main.zip -d
+    %UserProfile%\\Documents\\** or use your favorite zip application such as
     7-zip.
 
 -   at the command prompt type **cd %UserProfile%\\Documents**
 
--   type **dir/w **to list the files then **cd trio-ircproxy**-**main**
+-   type **dir/w** to list the files then **cd trio-ircproxy**-**main**
 
 -   type **install.bat -3.11** the *-3.11* is the *Python version* you have
     installed.
@@ -64,9 +64,9 @@ your code you accept the LICENSE that comes with the PR or other
 **contribution.**
 
 The web-server half of the project is available in another repo found at
-**https://github.com/ashburry-chat-irc/mslscript.com **and runs with Flask on
-**www.PythonAnywhere.com **servers. It is being developed in real-time at**
-https://www.mslscript.com **page by page and has a long way to go. Once in
+**https://github.com/ashburry-chat-irc/mslscript.com** and runs with Flask on
+**www.PythonAnywhere.com** servers. It is being developed in real-time at
+**https://www.mslscript.com** page by page and has a long way to go. Once in
 awhile I update the repo with the web-site code which you can get working with
 minimal effort.
 
@@ -75,27 +75,26 @@ VPS server with several dozen IPs and hostnames to choose from, this will allow
 masking of your IP address making ZNC obsolete (right now it is compatible with
 ZNC.) The /server line of ZNC is complicated and hard to remember and does not
 auto-save on the command line. A Proxy server is much better but your client
-must support Proxy servers (which is all of them at this time). I will make it
-so you may type **/server ircproxy.xyz:1234** then **/raw CONNECT
-irc.undernet.org:6667 username\@client-id password**. Log-in to the web-site
-www.mslscript.com and you can view your commands with your username and password
-intact so you do not need to remember your proxy-server hostnames or IPs or port
-numbers, and more. If you setup your IRC-client to use the proxy-server properly
-you can just connect to any IRC network with your IRC client and it just works,
-no need to program which network to connect to. All you need to change is the
-client-id for each client if they are both using Machine-Gun named Bauderr, a
-mSL script. The flask web-site is named RoseMay, and the proxy-server is named
-Trio-ircproxy.py (dot pie). Trio is a mini-framework for async/await so I can
-use just one CPU core without any blocking or threading or problem solving
-multi-core functionality to work around blocking. Since there are only about 4
-cores for a CPU it is not much better using more than one CPU core, however I
-could find uses for those extra cores. Such as very simple http connections with
-web-page text extraction without processing or using any HTML, CSS, nor
-JavaScript; nor any httpd hosting (that is threaded with the main process).
-Running more proxy server host apps on different port numbers and on different
-application installations.  *Just *about anything could make use of an extra
-core, except **NOT **for threading our applications’ *main process *if it is
-complicated*, *and even still requires extra attention and *alertness*.
+must support Proxy servers (which is all of them at this time). Log-in to the
+web-site www.mslscript.com and you can view your /proxy command with your
+username and password intact so you do not need to remember your proxy-server
+hostnames or IPs or port numbers, and more. If you setup your IRC-client to use
+the proxy-server properly you can just connect to any IRC network with your IRC
+client and it just works, no need to program which network to connect to. All
+you need to change is the client-id for each client if they are both using
+Machine-Gun named Bauderr, a mSL script. The flask web-site is named RoseMay,
+and the proxy-server is named Trio-ircproxy.py (dot pie). Trio is a
+mini-framework for async/await so I can use just one CPU core without any
+blocking or threading or problem solving multi-core functionality to work around
+blocking. Since there are only about 4 cores for a CPU it is not much better
+using more than one CPU core, however I could find uses for those extra cores.
+Such as very simple http connections for web-page text extraction without
+processing or using any HTML, CSS, nor JavaScript; nor any httpd hosting (that
+is threaded with the main process). Running more proxy server host apps on
+different port numbers and on different application installations. *Just* about
+anything could make use of an extra core, except **NOT** for threading our
+applications’ *main process* if it is complicated*,* and even still requires
+extra attention and *alertness*.
 
 **About**
 ---------
@@ -103,13 +102,12 @@ complicated*, *and even still requires extra attention and *alertness*.
 RoseMay (also named as the web-site) is a peer worker (and potential serial
 killer) and a dual core Thinkpad Laptop Machine that is compatible with OpenBSD.
 Bauderr is a Machine-Gun and a police officer together; the same as like the
-LapTop and the kind  indigenous peer worker (RoseMay), About the laptop, the
-more money I spend on it the more power it gains. It does not need to steal,
-borrow, or gamble or be given power in-order to increase its personal power
-level supply. The more power it has the longer it will live and can survive
-damage. Even take over the world with enough money put in to it. All of which
-started as pre-organic, hosted **life** from a real life host of a person with a
-purpose.
+LapTop and the kind indigenous peer worker (RoseMay), About the laptop, the more
+money I spend on it the more power it gains. It does not need to steal, borrow,
+or gamble or be given power in-order to increase its personal power level
+supply. The more power it has the longer it will live and can survive damage.
+Even take over the world with enough money put in to it. All of which started as
+pre-organic, hosted **life** from a real life host of a person with a purpose.
 
 Pre-organic serial killers will eventually fill our planet and destroy the
 enemies that keep us **getting** murdered and tortured. With unlimited power,
@@ -133,8 +131,8 @@ is up to you but you will be too happy to worry about fighting over power and
 too happy to remember life on a planet although with enough focus it will be
 possible. Also anyone who thinks about someone else **NOW** will leave
 stranger-danger thoughts on The Line in some of our peoples brains in the
-future. So everyone will need their pins pulled which means no memories.  And
-the person the with most delay will be the target delay for everyone so we can
+future. So everyone will need their pins pulled which means no memories. And the
+person the with most delay will be the target delay for everyone so we can
 communicate with our minds without missing half the message with everybody
 compatible. I hope to give the power of my laptop to the pre-organic serial
 killers to start them out with (assuming they start with nothing). Or I give
@@ -147,7 +145,7 @@ thrown in the trash collection; as in it gets wasted and I kill a person. A
 serial killer made it so I can live longer life than a short life; without
 power. I will not go backwards in time more than the 8 seconds a fell behind
 pre-fixed. I should have called the pre-organic serial killers and forced the
-serial killer the join our network or be destroyed and his entire network,
+serial killers to join our network or be destroyed and their entire networks,
 destroyed. And every serial killer on/off the planet; destroyed. I can only hope
 a host gets this message and summons the pre-organic serial killers before we
 lose a host that breaks or another one gets taken and run at 100% murder and
