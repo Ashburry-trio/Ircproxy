@@ -93,7 +93,6 @@ import sys
 import os
 from cryptography.fernet import Fernet
 
-
 _dir = path.dirname(path.abspath(__file__))
 chdir(realpath(dirname(expanduser(argv[0]))))
 
@@ -102,6 +101,7 @@ VERSION_NUM = "PEACE"
 
 def encrypt(message: bytes, key: bytes) -> bytes:
     return Fernet(key).encrypt(message)
+
 
 def decrypt(token: bytes, key: bytes) -> bytes:
     return Fernet(key).decrypt(token)
@@ -162,7 +162,8 @@ def colourstrip(data: str) -> str:
     return data
 
 
-async def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream, server_socket: trio.SSLStream | trio.SocketStream):
+async def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream,
+                            server_socket: trio.SSLStream | trio.SocketStream):
     socket_data.echo(client_socket, 'There was a exploit attempt by IRC network.')
     await actions.send_quit(server_socket)
 
@@ -177,7 +178,7 @@ def check_mirc_exploit(proto: str) -> bool:
     proto: str = str(proto)
     proto = proto.strip(':')
     proto = proto.lower()
-    proto_split: list[str,...] = proto.split(' ')
+    proto_split: list[str, ...] = proto.split(' ')
     nick: bool = False
     if len(proto_split) > 1 and (proto_split[1] == '004' or proto_split[1] == '322'):
         return False
@@ -346,7 +347,7 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
 
 
 async def proxy_make_irc_connection(client_socket: trio.SocketStream
-                                                        | trio.SSLStream, ss_hostname: str, port: int) -> None:
+                                                   | trio.SSLStream, ss_hostname: str, port: int) -> None:
     """Make a connection to the IRC network and fail (502) if unable to connect.
     vars:
         :type server: str
@@ -365,27 +366,55 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         granted: bytes = b"HTTP/1.0 200 connection started with irc server.\r\n\r\n"
         if not await socket_data.raw_send(client_socket, None, granted):
             return None
-    except:
-    #except (gaierror, ConnectionRefusedError, OSError, ConnectionAbortedError, ConnectionError):
-        await socket_data.raw_send(client_socket, None,
-                                   b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
-        await aclose_sockets(sockets=(client_socket, None))
+    except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+            trio.BusyResourceError, gaierror, OSError):
         return None
     try:
         if port in (6697, 9999, 443, 6699, 6999, 7070) \
                 or (port == 7000 and ss_hostname != 'irc.dal.net') and ss_hostname != 'irc.undernet.org':
-            crt_path = os.path.join(os.path.abspath('..'), 'client.crt')
-            key_path = os.path.join(os.path.abspath('..'), 'client.key')
-            server_cert = os.path.join(os.path.abspath('..'), 'server.crt')
-
             ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
             ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
             ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-            ssl_context.load_cert_chain(certfile=crt_path, keyfile=key_path)
-            server_socket: trio.SSLStream = await trio.open_ssl_over_tcp_stream(ss_hostname, port,
-                                                https_compatible=False, ssl_context=ssl_context, happy_eyeballs_delay=0.180)
+            try:
+                server_socket: trio.SocketStream | trio.SSLStream = await trio.open_ssl_over_tcp_stream(
+                                                                                        ss_hostname,
+                                                                                            port,
+                                                                                    https_compatible=False,
+                                                                                    ssl_context=ssl_context,
+                                                                                    happy_eyeballs_delay=0.180)
+            except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+                    trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
+                    ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+                    ConnectionError, BaseException):
+                try:
+                    with trio.fail_after(5.8):
+                        await socket_data.raw_send(client_socket, None,
+                                               b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
+                        await aclose_sockets(sockets=(client_socket, None))
+                except (trio.TooSlowError, trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+                            trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
+                            ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+                            ConnectionError, BaseException):
+                    return None
+
         else:
-            server_socket: trio.SocketStream = await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.180)
+            try:
+                server_socket: trio.SocketStream | trio.SSLStream = \
+                    await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.180)
+            except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+                    trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
+                    ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+                    ConnectionError, BaseException):
+                try:
+                    await socket_data.raw_send(client_socket, None,
+                                               b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
+                    await aclose_sockets(sockets=(client_socket, None))
+                except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+                        trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
+                        ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+                        ConnectionError, BaseException):
+                    return None
+        await trio.sleep(3)
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ':' + str(port)
 
@@ -398,7 +427,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[client_socket], 'cs')
             # Write to server
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
-    except (EndSession, ):
+    except (EndSession,):
         socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
         # return
@@ -407,6 +436,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         print('BaseException #001A')
         socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
+        return
     finally:
         # proxy_make_irc_connection()
         print("connections were closed. nursery finished.")
@@ -435,7 +465,7 @@ async def write_loop(client_socket: trio.SocketStream |
         :@return: None
 
     """
-    line: bytes
+    line: bytes = b''
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
         if not line:
             try:
@@ -462,7 +492,6 @@ async def write_loop(client_socket: trio.SocketStream |
                       + str(exc.args) + ' LINE: ' + str(line))
                 raise EndSession('Write Error. ' + which_sock + ' ' + str(line))
         await trio.sleep(0)
-
 
 
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
@@ -592,7 +621,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
         # print('Error With: '+single_line)
         if len(split_line) < 5:
             return None
-        nicks: list[str,...]
+        nicks: list[str, ...]
         nicks = [split_line[4].lstrip(':')]
         print(f'nicks: {nicks}')
         print('remove full colon!')
@@ -676,7 +705,7 @@ def lower_strip(text: str) -> str:
 
 
 async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
-                            server_socket: trio.SocketStream | trio.SSLStream, which_sock) -> bool | None:
+                                server_socket: trio.SocketStream | trio.SSLStream, which_sock) -> bool | None:
     """Read loop to receive data from the socket and pass it to
         fast_line_split_for_read_loop()
 
@@ -720,7 +749,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
                 break
             read_some_found: int = find_n + 1
             read_some = read_line[0:find_n + 1]
-            #print(b'read some: ' + read_some)
+            # print(b'read some: ' + read_some)
             read_str = usable_decode(read_some)
             read_str = read_str.strip()
             read_strip = lower_strip(read_str)
@@ -728,7 +757,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             await rcvd_line(client_socket, server_socket, read_str, read_split)
             remain = read_line[read_some_found:]
             read_line = remain
-            #print(b'remaining: ' + read_line)
+            # print(b'remaining: ' + read_line)
         if find_n == -1:
             read_str = ''
             read_strip = ''
@@ -766,7 +795,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         await trio.sleep(0)
         return None
     if original_line[0] == '@':
-        if not single_line.startswith('@time') and not single_line.startswith('@account'):
+        if not single_line.startswith('@time') and not single_line.startswith('@account') and not \
+                single_line.startswith('@batch'):
             print('Line starts with a new @ sign text')
             print('@@@@@@ @@@ @ @ ' + original_line)
             await trio.sleep(0)
@@ -832,17 +862,18 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     elif split_line[0] == '301':
         reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
         msg = f":www.mslscript.com NOTICE {socket_data.mynick[client_socket]}" \
-                f" :User {orig_upper_split[3]} is" \
-                f" set away, reason: {reason}"
+              f" :User {orig_upper_split[3]} is" \
+              f" set away, reason: {reason}"
         actions.sc_send(client_socket, msg)
 
     actions.sc_send(client_socket, original_line)
     await trio.sleep(0)
     return None
 
+
 async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
-                     server_socket: trio.SocketStream | trio.SSLStream,
-                     single_line: str, split_line: list[str])-> None:
+                           server_socket: trio.SocketStream | trio.SSLStream,
+                           single_line: str, split_line: list[str]) -> None:
     """Client socket received a line of data.
             Vars:
                 :@param client_socket: client socket
@@ -1181,7 +1212,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     if not check_fry_server(hostname):
         socket_data.clear_data(cs_before_connect)
         await aclose_sockets(sockets=(cs_before_connect,))
-        print (':::::: FRY_SERVER TRIGGERED ::::::')
+        print(':::::: FRY_SERVER TRIGGERED ::::::')
         return None
     socket_data.hostname[cs_before_connect] = hostname
     port = f'{cs_before_connect.socket.getsockname()[1]}'
@@ -1204,7 +1235,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             if not byte_string.endswith("\r\n\r\n"):
                 continue
             break
-        except (BaseException, EndSession, trio.Cancelled,trio.BrokenResourceError,
+        except (BaseException, EndSession, trio.Cancelled, trio.BrokenResourceError,
                 trio.ClosedResourceError, trio.BusyResourceError, trio.TrioInternalError) as exc:
             print("handler EXCEPT 1: " + str(exc.args))
             await aclose_both(cs_before_connect)
@@ -1324,4 +1355,3 @@ def begin_server() -> None:
 
 if __name__ == "__main__":
     begin_server()
-
