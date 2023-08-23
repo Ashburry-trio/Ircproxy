@@ -6,23 +6,13 @@ import http3
 #import requests
 
 
-class Games():
-    def __init__(self):
-        self.all_bj_games = []
-        self.all_simple_dice_gmaes = []
-
-class Game():
-    def __init__(self, game_type, owner):
-        self.type = game_type
-        self.owner = owner
-
 async def get_url_desc(url):
     client = http3.AsyncClient()
     page = await client.get(url)
     # page = requests.get(url)
     page_text: str = page.text
     while '\n' in page_text:
-        page_text = page_text.replace('\n','')
+        page_text = page_text.replace('\n', '')
     while '  ' in page_text:
         page_text = page_text.replace('  ', ' ')
     page_text_low = page_text.lower()
@@ -48,7 +38,6 @@ async def get_url_desc(url):
     desc = desc[:160]
 
     title = ans
-    desc = desc
     tit_desc = (url, title, desc)
     return tit_desc
 

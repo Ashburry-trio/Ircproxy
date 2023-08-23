@@ -69,7 +69,7 @@ from os.path import realpath
 from pendulum import duration
 from pif import get_public_ip
 from random import randint
-
+from scripts.trio_ircproxy.url_desc.url_desc import get_url_desc
 from scripts.trio_ircproxy import actions
 from scripts.trio_ircproxy import ial
 from scripts.trio_ircproxy import proxy_commands
@@ -268,12 +268,14 @@ def usable_decode(text: bytes) -> str:
             decoded_text = text.decode("latin1")
         except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
             try:
+                # detect encoding:
                 det = detect(text)
                 decoded_text = text.decode(det['encoding'], errors="replace")
-            except (EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
+            except (UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
                 return ''
-            except (UnicodeWarning,) as exp:
-                pass
+            except (EncodingWarning, UnicodeWarning,) as exp:
+                if not decoded_text:
+                    return ''
     return decoded_text
 
 
@@ -471,8 +473,8 @@ async def write_loop(client_socket: trio.SocketStream |
             try:
                 line = usable_decode(send_buffer.popleft()).strip().encode('utf-8', errors='replace')
             except IndexError:
-                await trio.sleep(0.250)
                 line = b''
+                await trio.sleep(0.250)
                 continue
             line += b"\r\n"
         with trio.fail_after(28):
@@ -908,8 +910,9 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         await trio.sleep(0)
         return None
     halt_on_yes: bool | None = False
-    if split_line_low[1].startswith('trio') or split_line_low[1].startswith('proxy') or \
-            split_line_low[1].startswith('xdcc') or split_line_low[1].startswith('py'):
+    if split_line_low[1].startswith('.trio') or split_line_low[1].startswith('.proxy') or \
+            split_line_low[1].startswith('.xdcc') or split_line_low[1].startswith('.py'):
+        print(str(split_line_low))
         halt_on_yes = cs_rcvd_command(client_socket, server_socket, original_line, split_line_low)
     if not halt_on_yes:
         actions.sc_send(dest_socket, original_line)
@@ -1031,13 +1034,12 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
         # yes_halt = True to NOT send to server
         return True
 
-    if 'xdcc' in split_line[0]:
+    if '.xdcc' in split_line[0]:
         xdcc_system.xdcc_commands(client_socket, server_socket, single_line, split_line)
         return True
-    if 'trio' in split_line[0] or 'proxy' in split_line[0]:
+    if '.trio' in split_line[0] or 'proxy' in split_line[0]:
         proxy_commands.commands(client_socket, server_socket, single_line, split_line)
         return True
-    from url_desc.url_desc import get_url_desc
     if (split_line[0] == '.url') and (len(split_line) == 2):
         chan = single_line.split(' ')[1]
         url, title, desc = get_url_desc(split_line[1].lstrip(':'))
@@ -1313,10 +1315,9 @@ async def start_proxy_listener():
             KeyboardInterrupt, OSError, gaierror) as exc:
         if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):
             print(
-                '\nERROR: The listening port is being used somewhere else. '
-                + 'Maybe trio-ircproxy.py is already running somewhere?')
+                '\nERROR: the listening port is being used somewhere else. '
+                + 'maybe trio-ircproxy.py is already running somewhere?')
         else:
-            # Create a new list to to prevent modifying while looping
             await quit_all()
         print("EXC: " + str(exc.args))
         print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")

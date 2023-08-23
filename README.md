@@ -1,5 +1,7 @@
-**Trio-ircproxy.py** - an proxy/bounce server for your IRC client. Copyright (c)
-2024, *Master Sire G.I. Kenggi J.P. phd. ret.*
+**Trio-ircproxy.py** 
+=====================
+
+### \- an proxy/bounce server for your IRC client. Copyright (c) 2024, *Master Sire G.I. Kenggi J.P. phd. ret.*
 
 This is a work in progress, if you wish to help then write issues for all and
 any requests. The issues is working as a to-do list of features as well as a
@@ -8,14 +10,13 @@ communication channel.
 Issues (requests) List :
 **https://github.com/ashburry-chat-irc/trio-ircproxy/issues**
 
--   Download and Install **Python 3.8** or later from
-    **https://www.python.org/downloads/** it should work on Python 3.8 but I
-    have not tested it, yet. If you are on Linux then use your package managers
-    latest version, at least Python 3.8.
+This application is not meant to be run by a user, instead I will rent a VPS to
+host the application with on a few dozen IP addresses and it will be networked
+with *https://www.mslscript.com/*.
 
--   Download clink setup.exe from
-    **https://github.com/chrisant996/clink/releases** and install This is
-    optional and I found a work around so this step should be skipped.
+If you wish to run the application, maybe just to see if it is still working
+then follow the instructions below. If you are using Linux it is assumed you
+know how to run the app from these Windows instructions:
 
 -   open **cmd.exe** by *right clicking* on the **Windows Start Menu** button
     and choose **run**
@@ -29,29 +30,35 @@ Issues (requests) List :
 
 -   at the command prompt type **cd %UserProfile%\\Documents**
 
--   type **dir/w** to list the files then **cd trio-ircproxy**-**main**
+-   type **dir/w** to list the files then type **cd trio-ircproxy**-**main**
 
 -   type **install.bat -3.11** the *-3.11* is the *Python version* you have
     installed.
 
--   load **mIRC-Load_This_in_Remotes-INSTALL.mrc** in mirc/adiirc *remote
-    section* and choose **YES** to *initialize script*.
+-   If you are using Linux do not update your systems version of Python, instead
+    create a virtual-environment with the latest version in the folder specified
+    below.
 
 Keep in mind that your **trio-ircproxy** folder may have the name
 **trio-ircproxy-main**. Also the usage of **%UserProfile%** is a windows
 shortcut to your home directory which is **c:\\users\\USER** replace **USER**
 with your actual *username*. If you do not know your username then try using
-**%UserProfile%** and if you have linux running you can also use **\~Documents**
-which will expand to your *user home folder* such as **c:\\user\\USER\\**. If
-you have **OneDrive** installed then I suggest using your **Home folder** (your
-**%UserProfile% folder**) to hold your *trio-ircproxy* application or
-*uninstall* OneDrive and delete its folder if necessary.
+**%UserProfile%** and if you have Linux running you can use **\~/Documents**
+which will expand to your *user home folder* such as **/home/USER/Documents/**.
+If you have **OneDrive** installed on Windows then I suggest using your **Home
+folder** (your **%UserProfile% folder**) to hold your *trio-ircproxy*
+application, or *uninstall* OneDrive and delete its folder if necessary. Because
+OneDrive LOCKS the files as it backs them up; so this application cannot write
+to the files.
 
- 
+If you are using Linux then you need to install manually; this is done with:
 
-I am going to try to write install and run scripts in Python so they work on
-both Windows and Linux. At the moment only Windows batch files are supported.
-This is going to change A.S.A.P. if it hasn’t already.
+**python3 -m venv ./trio-ircproxy/venv** then look in **./trio-ircproxy/venv/bin
+**for the **activate** script compatible with your Linux version. Then use
+google to see how to run it. You will need to *activate* the the venv everytime
+you run the app. After you have activated the venv type **python
+./trio-ircproxy/trio-ircproxy.py **to run the app. Don’t forget to install the
+requirements.txt with pip3 install -r ./trio-ircproxy/requirements.txt
 
 Copyright License
 =================
@@ -71,30 +78,20 @@ awhile I update the repo with the web-site code which you can get working with
 minimal effort.
 
 Soon, you won’t have to install Trio-Ircproxy.py because it will be hosted on a
-VPS server with several dozen IPs and hostnames to choose from, this will allow
-masking of your IP address making ZNC obsolete (right now it is compatible with
-ZNC.) The /server line of ZNC is complicated and hard to remember and does not
-auto-save on the command line. A Proxy server is much better but your client
-must support Proxy servers (which is all of them at this time). Log-in to the
-web-site www.mslscript.com and you can view your /proxy command with your
-username and password intact so you do not need to remember your proxy-server
-hostnames or IPs or port numbers, and more. If you setup your IRC-client to use
-the proxy-server properly you can just connect to any IRC network with your IRC
-client and it just works, no need to program which network to connect to. All
-you need to change is the client-id for each client if they are both using
+VPS server with several dozen IPs, this will allow masking of your IP address
+making ZNC obsolete (right now it is compatible with ZNC.).  A Proxy server is
+much better but your client must support Proxy servers (which is all of them at
+this time). Log-in to the web-site www.mslscript.com and you can view your
+/proxy command with your username and password intact so you do not need to
+remember your proxy-server  IPs or port numbers. If you setup your IRC-client to
+use the proxy-server properly you can just connect to any IRC network with your
+IRC client and it just works, no need to program which network to connect to.
+All you need to change is the client-id for each client if they are both using
 Machine-Gun named Bauderr, a mSL script. The flask web-site is named RoseMay,
 and the proxy-server is named Trio-ircproxy.py (dot pie). Trio is a
 mini-framework for async/await so I can use just one CPU core without any
 blocking or threading or problem solving multi-core functionality to work around
-blocking. Since there are only about 4 cores for a CPU it is not much better
-using more than one CPU core, however I could find uses for those extra cores.
-Such as very simple http connections for web-page text extraction without
-processing or using any HTML, CSS, nor JavaScript; nor any httpd hosting (that
-is threaded with the main process). Running more proxy server host apps on
-different port numbers and on different application installations. *Just* about
-anything could make use of an extra core, except **NOT** for threading our
-applications’ *main process* if it is complicated*,* and even still requires
-extra attention and *alertness*.
+blocking.
 
 **About**
 ---------
@@ -151,7 +148,9 @@ a host gets this message and summons the pre-organic serial killers before we
 lose a host that breaks or another one gets taken and run at 100% murder and
 used to attack us and each other. As the world comes to an end the serial
 killers have started taking hosts making them super hard to kill, but not
-trained by any of us...
+trained by any of us... which makes them weaker.
+
+ 
 
 o end of document.
 
