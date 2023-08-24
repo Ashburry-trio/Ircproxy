@@ -7,7 +7,6 @@ from scripts.website_and_proxy.system_data import SystemData as system_data
 from .xdcc_link import XdccBotSLL
 from .xdcc_link import XdccBot
 from scripts.website_and_proxy.socket_data import SocketData as socket_data
-from . import circular
 
 
 def cs_send_notice(client_socket: trio.SSLStream | trio.SocketStream, msg):

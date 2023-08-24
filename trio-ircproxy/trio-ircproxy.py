@@ -692,6 +692,10 @@ def cs_away_msg_notify(client_socket: trio.SocketStream | trio.SSLStream, nick: 
 
 
 def lower_strip(text: str) -> str:
+    return lower_color_and_strip(text)
+
+
+def lower_color_and_strip(text: str) -> str:
     """lower text, strip text, mirc colour removal
     :@param text: text to be stripped, lowered, and removed colour; to be parsed.
     :@return: returns the string
@@ -733,7 +737,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
     read_sock: bytes = b''
     while True:
         try:
-            read_sock = await dest_socket.receive_some(32100)
+            read_sock = await dest_socket.receive_some(10555)
         except trio.BusyResourceError:
             await trio.sleep(0.100)
             continue
@@ -751,7 +755,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             # print(b'read some: ' + read_some)
             read_str = usable_decode(read_some)
             read_str = read_str.strip()
-            read_strip = lower_strip(read_str)
+            read_strip = lower_color_and_strip(read_str)
             read_split = read_strip.split(' ')
             await rcvd_line(client_socket, server_socket, read_str, read_split)
             remain = read_line[read_some_found:]
@@ -763,7 +767,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             read_split = []
             read_sock = b''
             find_n = -1
-        await trio.sleep(0.225)
+        await trio.sleep(0.180)
 
 
 async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
@@ -786,7 +790,7 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     single_line = single_line.lower()
     # actions.sc_send(dest_socket, original_line)
     if len(split_line) == 0:
-        actions.sc_send('\r\n')
+        actions.sc_send(dest_socket, '\r\n')
         return
 
     if check_mirc_exploit(original_line) is True:
@@ -795,7 +799,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         return None
     if original_line[0] == '@':
         if not single_line.startswith('@time') and not single_line.startswith('@account') and not \
-                single_line.startswith('@batch') and not single_line.startswith('@msgid'):
+                single_line.startswith('@batch') and not single_line.startswith('@msgid') and not \
+                single_line.startswith('@+typing'):
             print('Line starts with a new @ sign text')
             print('@@@@@@ @@@ @ @ ' + original_line)
             await trio.sleep(0)
@@ -851,13 +856,11 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
             return None
     elif split_line[0] == '005':
         sock_005(client_socket, original_line)
-        await trio.sleep(0)
     elif split_line[0] in ("001", "372", "005", "376", "375", "422"):
         socket_data.state[client_socket]['doing'] = 'signed on'
         socket_data.mynick[client_socket] = split_line[2].lower()
         socket_data.state[client_socket]['upper_nick'] = orig_upper_split[2]
         socket_data.set_face_nicknet(client_socket)
-        await trio.sleep(0)
     elif split_line[0] == '301':
         reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
         msg = f":www.mslscript.com NOTICE {socket_data.mynick[client_socket]}" \

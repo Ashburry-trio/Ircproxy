@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fnmatch import fnmatch
-from . import circular
 from pendulum import duration
 from ..website_and_proxy.socket_data import SocketData as socket_data
 from time import time
