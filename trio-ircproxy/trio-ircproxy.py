@@ -96,7 +96,6 @@ chdir(realpath(dirname(expanduser(argv[0]))))
 
 VERSION_NUM = "PEACE"
 
-
 def encrypt(message: bytes, key: bytes) -> bytes:
     return Fernet(key).encrypt(message)
 
@@ -230,11 +229,16 @@ async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
 
     """
     try:
+        sc2_socket = socket_data.mysockets[sc_socket]
+        if socket_data.which_socket[sc_socket] == 'cs':
+            socket_data.clear_data(sc_socket)
+        else:
+            socket_data.clear_data(sc2_socket)
         await sc_socket.aclose()
     except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError):
         pass
     try:
-        await socket_data.mysockets[sc_socket].aclose()
+        await sc2_socket.aclose()
     except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError, KeyError):
         pass
     return None
@@ -492,7 +496,7 @@ async def write_loop(client_socket: trio.SocketStream |
                       + str(exc.args) + ' LINE: ' + str(line))
                 raise EndSession('Write Error. ' + which_sock + ' ' + str(line))
         await trio.sleep(0)
-
+        raise EndSession('sockets closed.')
 
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        server_socket: trio.SocketStream | trio.SSLStream,
@@ -893,7 +897,7 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     single_line = single_line.lower()
     split_line_low: list[str, ...] = single_line.split(' ')
     split_line: list[str, ...] = original_line.split(' ')
-    #print(original_line)
+    print(original_line)
     if split_line_low[0] == 'nick' and len(split_line) == 2:
         socket_data.mynick[client_socket] = split_line[1].lstrip(':')
 
@@ -970,7 +974,9 @@ def dur_replace(in_words: str) -> str:
 
 
 def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) -> None:
-    """The replaced MOTD sent to the irc-client upon connecting
+    """The replaced MOTD sent to the irc-client upon connecting. Add code to download
+    motd from website, after connection and old motd has been sent. Notify user if there
+    is a new motd, "/msg *status motd" for the latest.
 
     @param client_socket: the socket to the irc-client
     @param mynick: the string of irc-client nickname to send the MOTD to
@@ -980,8 +986,8 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     prefix = ':www.mslscript.com 375 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + 'www.mslscript.com Message of the Day -')
     prefix = ':www.mslscript.com 372 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + '\x02replacing MOTD\x02 -')
-    actions.sc_send(client_socket, prefix.strip())
+    actions.sc_send(client_socket, prefix + '\x02www.mslscript.com MOTD\x02 -')
+    actions.sc_send(client_socket, prefix)
     actions.sc_send(client_socket, prefix + 'To connect to a SSL port, '
                                             '\x02DO NOT\x02 prefix the port with -')
     actions.sc_send(client_socket, prefix + 'a \x02+\x02 character. End-to-end encryption'
@@ -1006,9 +1012,6 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     prefix = ':www.mslscript.com 376 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + 'End of /MOTD -')
     return None
-
-
-time_last_pong: float = 0.0
 
 
 def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
@@ -1279,20 +1282,14 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         async with trio.open_nursery() as sent_connect_nursery:
             sent_connect_nursery.start_soon(before_connect_sent_connect, cs_before_connect, lines[0])
 
-    except EndSession as exc:
-        print("handler EXCEPT 3: " + str(exc.args))
+    except (trio.ClosedResourceError, EndSession, BaseException):
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
-
-    except trio.ClosedResourceError:
-        await aclose_both(cs_before_connect)
-        socket_data.clear_data(cs_before_connect)
-    except (BaseException) as exc:
+    except (EndSession,):
+        print('EndSession:')
+    except (BaseException,):
         print("handler EXCEPT 2: " + str(exc.args))
-        await aclose_both(cs_before_connect)
-        socket_data.clear_data(cs_before_connect)
         raise
-        # this is proxy_server_handler()
 
 
 async def start_proxy_listener():
@@ -1305,9 +1302,15 @@ async def start_proxy_listener():
 
     listen_ports: str = system_data.Settings_ini["settings"].get("listen_ports", '4321')
     print('-+')
+    listen_ports = listen_ports.replace(',', ' ').replace(';',' ').replace('  ',' ')\
+        .replace('*','').replace('+','')
+    while '  ' in listen_ports:
+        listen_ports = listen_ports.replace('  ', ' ')
+
+    listen_ports_list: list[str, ...] = listen_ports.split(' ')
     try:
         async with trio.open_nursery() as nursery:
-            for f in listen_ports.split(' '):
+            for f in listen_ports_list:
                 nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(f))
                 print("proxy is ready, listening on port " + str(f))
             print("press Ctrl+C to quit...\n")
@@ -1321,7 +1324,7 @@ async def start_proxy_listener():
             await quit_all()
         print("EXC: " + str(exc.args))
         print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
-        raise
+        #raise
         # try:
         #    sys.exit(13)
         # except SystemExit:
