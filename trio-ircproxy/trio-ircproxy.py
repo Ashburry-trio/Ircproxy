@@ -82,8 +82,6 @@ from scripts.website_and_proxy.users import validate_login, verify_user_pwdfile
 # from sys import excepthook
 # from sys import exc_info
 from socket import gaierror
-from ssl import create_default_context, SSLContext
-from ssl import Purpose
 from sys import argv
 from threading import Timer
 from time import time
@@ -533,15 +531,14 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
         single_line = ' '.join(single_line.split(' ')[1:])
         orig_upper_split = original_line.split(' ')[1:]
         split_line = split_line[1:]
-    if '!' in split_line[0]:
+    if '!' in split_line[0] or '.' in split_line[0]:
         upper_nick_src: str = colourstrip(orig_upper_split[0].split('!')[0].lstrip(':'))
         upper_nick_full_src: str = colourstrip(orig_upper_split[0].lstrip(':'))
         src_nick_full = upper_nick_full_src.lower()
         nick_src = upper_nick_src.lower()
-        socket_data.state[client_socket]['upper_nick'] = upper_nick_src
     if split_line[1] == "nick":
         upper_nick_dest = colourstrip(orig_upper_split[2].lstrip(':'))
-        upper_nick_src = colourstrip(orig_upper_split[0].split('!')[0])
+        upper_nick_src = colourstrip(orig_upper_split[0].split('!')[0].lstrip(':'))
         nick_src = upper_nick_dest.lower()
         old_nick = upper_nick_src.lower()
         upper_nick_src = upper_nick_dest
@@ -798,7 +795,7 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         return None
     if original_line[0] == '@':
         if not single_line.startswith('@time') and not single_line.startswith('@account') and not \
-                single_line.startswith('@batch'):
+                single_line.startswith('@batch') and not single_line.startswith('@msgid'):
             print('Line starts with a new @ sign text')
             print('@@@@@@ @@@ @ @ ' + original_line)
             await trio.sleep(0)
@@ -893,7 +890,7 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     single_line = single_line.lower()
     split_line_low: list[str, ...] = single_line.split(' ')
     split_line: list[str, ...] = original_line.split(' ')
-    print(original_line)
+    #print(original_line)
     if split_line_low[0] == 'nick' and len(split_line) == 2:
         socket_data.mynick[client_socket] = split_line[1].lstrip(':')
 
