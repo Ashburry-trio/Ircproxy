@@ -1174,12 +1174,12 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     socket_data.hostname[cs_before_connect] = hostname
     port = f'{cs_before_connect.socket.getsockname()[1]}'
     socket_data.echo(cs_before_connect, "Accepted a client connection " + hostname + " on port " + str(port) + '...')
+    bytes_data: bytes=\=\]str = ""
     byte_string_data: bytes = b''
     auth: bool | None | tuple[str, str]
     bytes_data: bytes
-    byte_string = ''
     print('trio_move-on')
-    with trio.move_on_after(60) as cancel_scope:
+    with trio.move_on_after(155) as cancel_scope:
         while True:
             bytes_data: bytes = await cs_before_connect.receive_some(1)
             byte_string_data += bytes_data
@@ -1190,18 +1190,20 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         # proxy_server_handler
         socket_data.clear_data(cs_before_connect)
         await aclose_sockets(sockets=(cs_before_connect,))
-        socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
+        socket_data.echo(cs_before_connect, "Server is too slow to send data. Socket closed.")
         raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
-    print(str('finished print : \n' + str(byte_string_data)))
+    print(str('finished print : \n' + str(byte_string)))
     try:
-        auth: bool | tuple[str, str] = False
-        byte_string = str(byte_string_data.strip(b'\n'))
+        auth: bool | tuple[str, str]
+        byte_string = byte_string_data.strip(b'\n')
         while '\r' in str(byte_string):
             byte_string.replace("\r", "\n")
         while "\n\n" in byte_string:
             byte_string = byte_string.replace("\n\n", "\n")
+            print('byte_string 2: ' + byte_string)
         while "  " in byte_string:
             byte_string = byte_string.replace("  ", " ")
+        print('byte_string 3: ' + byte_string)
         lines: list[str, ...] = byte_string.split("\n")
         print('Try: ' + str(lines))
         print('Len of Lines: ' + str(len(lines)))
@@ -1211,33 +1213,41 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         for line in lines:
             lines[line_no] = line.strip()
             line_no += 1
+        print('safg1212')
         if len(lines) > 1:
             auth_list: list[str] = lines[1:]
             print('authenicate')
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if not auth:
-            socket_data.clear_data(cs_before_connect)
-            await aclose_sockets(sockets=(cs_before_connect,))
-            raise EndSession('Not authorized.')
+            print("NOT AUTH")
+            return None
         print("-----------------------\n")
         print(f'AUTH={str(auth)}')
         socket_data.login[cs_before_connect] = auth[0]
+        print('12safg')
         if cs_before_connect not in socket_data.state:
             socket_data.state[cs_before_connect] = {}
             socket_data.state[cs_before_connect]['doing'] = "connecting"
+            print('sa12fg')
             if 'by_username' not in system_data.user_settings:
                 system_data.user_settings['by_username'] = {}
-            if auth[0].lower() not in system_data.user_settings['by_username']:
-                system_data.user_settings['by_username'][auth[0].lower()] = set()
+            print('s45afg')
+            if auth[0] not in system_data.user_settings['by_username']:
+                system_data.user_settings['by_username'][auth[0]] = set()
+            print('sa65fg')
             system_data.user_settings['by_username'][auth[0]].add(cs_before_connect)
+
+        #async with trio.open_nursery() as nursery:
+         #   print('nusery.stat.soon')
+          #  nursery.start_soon(before_connect_sent_connect, cs_before_connect, lines[0])
 
         print('Lines :'+lines[0])
         await before_connect_sent_connect(cs_before_connect, lines[0])
     except (trio.ClosedResourceError, EndSession, BaseException, BaseExceptionGroup):
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
-    except (EndSession,) as exc:
-        print('EndSession:' + str(exc.args))
+    except (EndSession,):
+        print('EndSession:')
     except (BaseException, BaseExceptionGroup):
         print("handler EXCEPT 2: " + str(exc.args))
         pass
@@ -1248,6 +1258,8 @@ async def start_proxy_listener():
     """Start the proxy server.
 
     """
+    print('as long as this window is open, the proxy server is active.')
+    print('please awhile...')
     print('-+')
     if Settings_ini.has_section('settings') is False:
         Settings_ini.add_section('settings')

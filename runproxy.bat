@@ -32,19 +32,19 @@ echo ERROR, unable to find "activate.bat"
 goto done
 :end1
 IF EXIST "trio-ircproxy\trio-ircproxy.py" (
-    python.exe trio-ircproxy\trio-ircproxy.py
+    python .\trio-ircproxy\trio-ircproxy.py
     goto done
 ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\" (
-        python.exe "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
+        python "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
 ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\" (
-        python.exe "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+        python "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
         goto done
 ) ELSE IF EXIST "%UserProfile%\trio-ircproxy-main\trio-ircproxy\" (
-        python.exe "%UserProfile%\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
+        python "%UserProfile%\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
 ) ELSE IF EXIST "%UserProfile%\trio-ircproxy\trio-ircproxy\" (
-        python.exe "%UserProfile%\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+        python "%UserProfile%\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
         goto done
 )
 echo ERROR, Unable to find "trio-ircproxy.py"
