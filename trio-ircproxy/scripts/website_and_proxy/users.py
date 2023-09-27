@@ -16,7 +16,7 @@ def status_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> N
     if not msg.startswith(':'):
         msg = ':' + msg
     from scripts.website_and_proxy.socket_data import SocketData
-    msg = ':*mg-script!trio-ircproxy.py@www.mslscript.com PRIVMSG ' + SocketData.mynick[client_socket] + ' '+msg + '\r\n'
+    msg = ':*STATUS!trio-ircproxy.py@www.mslscript.com PRIVMSG ' + SocketData.mynick[client_socket] + ' '+msg + '\r\n'
     if client_socket in SocketData.send_buffer:
         SocketData.send_buffer[client_socket].append(msg)
     return None
@@ -24,25 +24,32 @@ def status_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> N
 
 
 def remove_user(name: str) -> bool:
-    removed: set[int] = set()
-    sfread_list: list[str]
+    removed: set[int, ...] = set()
+    sfread_list: list[str, ...]
+    line_split: list[str, ...]
     if exists(user_file):
         with open(user_file, 'r') as sfopen:
             sfread: str = sfopen.read()
             sfread_list = sfread.split('\n')
-        i: int = 0
+        i: int = -1
         line: str
         for line in sfread_list:
             line = line.strip()
             if ':' not in line:
+                i += 1
                 removed.add(i)
                 continue
-            line_split: list[str] = line.split(':')
+            line_split = line.split(':')
             if line_split[0].lower() == name.lower():
+                i += 1
                 removed.add(i)
+                continue
             i += 1
-    for i in removed:
-        del sfread_list[i]
+    rem_list = sorted(removed)
+    rem_list.reversed()
+    while rem_list:
+        rem_item = rem_list.pop()
+        del sfread_list[rem_item]
     with open(user_file, 'w') as sfopen:
         sfopen.write('\n'.join(sfread_list) + '\n')
         return True
@@ -66,7 +73,7 @@ def validate_login(name: str, email: str, password: str):
         raise ValueError('not an valid email, try again. (username email password')
     if name.find('admin') > -1:
         raise ValueError("UserName must not contain the word 'admin'.")
-    if name == 'user':
+    if name.lower() == 'user':
         raise ValueError('UserName cannot be "user".')
 
 
@@ -76,41 +83,47 @@ def verify_user_pwdfile(name: str, password: str) -> bool | str:
         with open(user_file, 'r') as sfopen:
             sfread: str = sfopen.read().strip()
             sfread_list: List[str] = sfread.split('\n')
-        i = 0
-        line: str
-        line_split: List[str, ...]
-        for line in sfread_list:
-            line = line.strip()
-            if ':' not in line:
-                continue
-            line_split = line.split(':')
-            if len(line_split) < 4:
-                continue
-            if line_split[0] == name.lower():
-                if line_split[3] == password:
-                    return line_split[2]
-                else:
-                    return False
+    else:
+        return False
+    i = 0
+    line: str
+    line_split: list[str, ...]
+    for line in sfread_list:
+        line = line.strip()
+        if ':' not in line:
+            continue
+        line_split = line.split(':')
+        if len(line_split) != 4:
+            continue
+        if line_split[0] == name.lower():
+            if line_split[3] == password:
+                return line_split[2]
+            else:
+                return False
     return False
 
 
 def add_new_user(name: str, email: str, password: str, /, account_power: str = 'normal', *, force: bool = False) -> bool:
-    login: str = name.lower() + ':' + email.lower() + ':' + account_power.lower() + ':' + sha256(bytes(password.encode('utf8'))).hexdigest()
+    try:
+        login: str = name.lower() + ':' + email.lower() + ':' + account_power.lower() + ':' + sha256(bytes(password.encode('utf8'))).hexdigest()
+    except (UnicodeEncodeError, EncodingWarning):
+        return False
     added_user: bool = False
-    sfread_list: List[str] = []
+    sfread_list: list[str, ...] = []
     if exists(user_file):
         with open(user_file, 'r') as sfopen:
             sfread: str = sfopen.read().strip()
-            sfread_list: List[str] = sfread.split('\n')
+            sfread_list = sfread.split('\n')
         i = 0
         line: str
-        remove: List[int] = []
+        remove: list[int] = []
+        line_split: list[str, ...]
         for line in sfread_list:
             line = line.strip()
             if line.count(':') != 3:
                 remove.append(i)
                 continue
-            line_split: List[str] = line.split(':')
+            line_split = line.split(':')
             if line_split[0] == name:
                 if force is True:
                     sfread_list[i] = login
@@ -118,6 +131,8 @@ def add_new_user(name: str, email: str, password: str, /, account_power: str = '
                 else:
                     raise ValueError(f'UserName already exists: "{name}".')
             i += 1
+        remove = sorted(remove)
+        remove.reverse()
         for i in remove:
             del sfread_list[i]
     if not added_user:
