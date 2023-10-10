@@ -1187,7 +1187,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     byte_string_data: bytes = b''
     auth: bool | None | tuple[str, str]
     bytes_data: bytes
-    byte_string = ''
+    byte_string: str = ''
     print('trio_move-on')
     with trio.move_on_after(60) as cancel_scope:
         while True:
@@ -1207,28 +1207,26 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         print('tryiong 1')
         auth: bool | tuple[str, str] = False
         byte_string = usable_decode(byte_string_data).strip()
-        while '\r' in byte_string:
-            byte_string = byte_string.replace("\r", "\n")
+        while b'\r' in byte_string_data:
+            byte_string_data = byte_string_data.replace(b"\r", b"\n")
             print('in loop 1')
-        while "\n\n" in byte_string:
-            byte_string = byte_string.replace("\n\n", "\n")
+        while b"\n\n" in byte_string_data:
+            byte_string_data = byte_string_data.replace(b"\n\n", b"\n")
             print('in loop 2')
-        while "  " in byte_string:
-            byte_string = byte_string.replace("  ", " ")
+        while b"  " in byte_string_data:
+            byte_string_data = byte_string_data.replace(b"  ", b" ")
             print('in loop 3')
         print('tryiong 2')
-        lines: list[str, ...] = byte_string.split("\n")
+        lines: list[bytes, ...] = byte_string_data.split(b"\n")
         print('Try: ' + str(lines))
-        print('Len of Lines: ' + str(len(lines)))
-        while '' in lines:
-            lines.remove('')
-        line_no: int = 0
+        while b'' in lines:
+            lines.remove(b'')
+        str_lines: [str, ...] = []
         for line in lines:
-            lines[line_no] = line.strip()
-            line_no += 1
-        del line, line_no
-        if len(lines) > 1:
-            auth_list: list[str] = lines[1:]
+            str_lines.append(usable_decode(line.strip()))
+        del line
+        if len(str_lines) > 1:
+            auth_list: list[str, ...] = str_lines[1:]
             print('authenicate')
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if not auth:
@@ -1247,8 +1245,8 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
                 system_data.user_settings['by_username'][auth[0].lower()] = set()
             system_data.user_settings['by_username'][auth[0]].add(cs_before_connect)
 
-        print('Line 1 :'+lines[0])
-        await before_connect_sent_connect(cs_before_connect, lines[0])
+        print('Line 1 :'+str_lines[0])
+        await before_connect_sent_connect(cs_before_connect, str_lines[0])
     except (trio.ClosedResourceError, EndSession, BaseException, BaseExceptionGroup):
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
