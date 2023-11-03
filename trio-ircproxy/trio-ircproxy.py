@@ -321,7 +321,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
                     ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
                     ConnectionError, BaseException):
                 try:
-                    with trio.fail_after(5.8):
+                    with trio.fail_after(17.8):
                         await socket_data.raw_send(client_socket, None,
                                                    b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
                         await aclose_sockets(sockets=(client_socket, None))
@@ -403,7 +403,8 @@ async def write_loop(client_socket: trio.SocketStream |
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
         if not line:
             try:
-                line = usable_decode(send_buffer.popleft()).strip().encode('utf-8', errors='replace')
+                line = bytes(send_buffer.popleft().strip()).encode('utf-8', errors='replace')
+                await trio.lowlevel.checkpoint()
             except IndexError:
                 line = b''
                 await trio.sleep(0.250)
@@ -414,6 +415,7 @@ async def write_loop(client_socket: trio.SocketStream |
                 if which_sock == 'cs':
                     await client_socket.send_all(line)
                 else:
+                    # print(b'TO Server: ' + line)
                     await server_socket.send_all(line)
                 line = b''
                 continue
@@ -651,7 +653,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
         :@param server_socket: irc server socket stream
         :@return: returns if the nursery needs to be closed.
     """
-
+    await trio.lowlevel.checkpoint()
     if 'connecting' == socket_data.state[client_socket]['doing']:
         socket_data.state[client_socket]['doing'] = 'signing on'
         socket_data.echo(client_socket, 'connected to ' + socket_data.hostname[server_socket])
@@ -841,7 +843,8 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     if split_line_low[0] == 'nick' and len(split_line) == 2:
         socket_data.mynick[client_socket] = split_line[1].lstrip(':')
     if split_line_low[0] == 'ping' or split_line_low[0] == 'pong':
-        print(str(split_line_low))
+        # print(str(split_line_low))
+        pass
     if split_line_low[0] == 'names':
         chan = split_line_low[1].lstrip(':')
         ial.IALData.myial_count[client_socket][chan] = 0
@@ -1188,7 +1191,6 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     auth: bool | None | tuple[str, str]
     bytes_data: bytes
     byte_string: str = ''
-    print('trio_move-on')
     with trio.move_on_after(60) as cancel_scope:
         while True:
             bytes_data: bytes = await cs_before_connect.receive_some(1)
@@ -1201,6 +1203,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         socket_data.clear_data(cs_before_connect)
         await aclose_sockets(sockets=(cs_before_connect,))
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
+        await trio.lowlevel.checkpoint()
         raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
     print('finished print : \n' + usable_decode(byte_string_data))
     try:
@@ -1247,14 +1250,10 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
 
         print('Line 1 :'+str_lines[0])
         await before_connect_sent_connect(cs_before_connect, str_lines[0])
-    except (trio.ClosedResourceError, EndSession, BaseException, BaseExceptionGroup):
+    finally:
         await aclose_both(cs_before_connect)
         socket_data.clear_data(cs_before_connect)
-    except (EndSession,) as exc:
-        print('EndSession:' + str(exc.args))
-    except (BaseException, BaseExceptionGroup):
-        print("handler EXCEPT 2: " + str(exc.args))
-        pass
+
     print('END OF proxy server handler')
 
 
@@ -1299,16 +1298,15 @@ async def start_proxy_listener():
 
 
 async def quit_all() -> None:
-    """send quitmsg and close all sockets.
+    """send a quit message and close all sockets.
 
     """
     sockets = socket_data.mysockets
     for sock in sockets:
         try:
             await actions.send_quit(sock)
-        except (trio.Cancelled, trio.ClosedResourceError, trio.BrokenResourceError,
-                trio.TrioInternalError, Exception, EndSession, ExceptionGroup, BaseExceptionGroup):
-            pass
+        except:
+            continue
     return None
 
 

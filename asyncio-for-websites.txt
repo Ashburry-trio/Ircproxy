@@ -1,0 +1,19 @@
+import asyncio
+import aiohttp
+
+async def connect_to_website(session, url):
+    async with session.get(url) as response:
+        if response.status == 200:
+		data = response.text()
+
+list_of_urls = ['ashburry.pythonanywhere.com','www.mslscript.com']
+async def get_urls():
+    global list_of_urls
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for url in list_of_urls:
+            task = asyncio.create_task(connect_to_website(session, url))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
+
+asyncio.run(get_urls())

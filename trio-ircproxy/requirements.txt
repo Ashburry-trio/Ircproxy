@@ -1,5 +1,9 @@
+git+https://github.com/python-trio/trio.git
+git+https://github.com/python-validators/validators
+git+https://github.com/DiffSK/configobj
+git+https://github.com/encode/httpx
+argparse>=1.4.0
 pytz>=2003.3
-trio>=0.22.0
 trio-typing>=0.7.0
 cryptography>=39.0.0
 itsdangerous>=2.1.2
@@ -13,4 +17,3 @@ sortedcontainers>=2.4.0
 typing>=3.7.4.3
 typing_extensions>=4.5.0
 urllib3>=1.26.14
-requests-async
