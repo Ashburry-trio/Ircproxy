@@ -25,7 +25,7 @@ Linux:
 #  If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
 #  After executing the above commands you only need to execute the following
 #  two commands to run the proxy server:
-#    source ./trio-ircproxy/venv/bin/activate     <- different for different terminals in linux
+#    source ./trio-ircproxy/venv/bin/activate  <- different for different terminals in linux
 #    python ./trio-ircproxy/trio-ircproxy.py
 
 I need to create an install script for Linux and the runproxy.bat for Linux
