@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import trio
+from actions import aclose_sockets
 from time import time
 from random import randint
 from collections import deque
@@ -26,31 +27,6 @@ def yes_no(msg: str = ''):
 system_data.load_settings()
 
 
-async def aclose_sockets(sockets: tuple[trio.SocketStream | trio.SSLStream | None, ...] = (None,)) -> None:
-    """Takes a list of sockets and closes them
-
-        vars:
-            :param sockets: a list of sockets to close
-            :returns: None
-    """
-    if not sockets:
-        return None
-    for sock in sockets:
-        if not sock:
-            continue
-        try:
-            with trio.fail_after(7):
-                await sock.aclose()
-        except (trio.ClosedResourceError, trio.BrokenResourceError, gaierror, OSError, BaseException):
-            pass
-        except trio.TooSlowError:
-            await trio.aclose_forcefully(sock)
-        try:
-            del SocketData.mysockets[sock]
-        except KeyError:
-            pass
-    await trio.sleep(0)
-    return None
 class SocketData:
     current_count: Dict[trio.SocketStream | trio.SSLStream | None, int | None]
     send_buffer: Dict[trio.SocketStream | trio.SSLStream | None, Deque[str | bytes | None]] = {}

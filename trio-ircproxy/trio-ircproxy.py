@@ -1283,6 +1283,8 @@ async def quit_all() -> None:
     """
     sockets = socket_data.mysockets
     for sock in sockets:
+        if socket_data.which_socket[sock] != 'cs':
+            continue
         try:
             await actions.send_quit(sock)
         except:
