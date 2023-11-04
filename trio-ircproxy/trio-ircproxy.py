@@ -72,7 +72,7 @@ from cryptography.fernet import Fernet
 _dir = path.dirname(path.abspath(__file__))
 chdir(realpath(dirname(expanduser(argv[0]))))
 
-VERSION_NUM = "PEACE"
+VERSION_NUM = "PEACE-3.0.1"
 
 
 def encrypt(message: bytes, key: bytes) -> bytes:
@@ -227,7 +227,7 @@ class EndSession(BaseException):
     """
 
     def __init__(self, args: str | None = ''):
-        super(BaseException).args = args
+        print('EndSession: '+str(args))
 
 
 def usable_decode(text: bytes) -> str:
@@ -364,10 +364,9 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
     except (EndSession,):
         socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
-        # return
         return
     except BaseException as exx:
-        print('BaseException #001A ' + exx)
+        print('BaseException #001A')
         socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
         return
@@ -403,7 +402,11 @@ async def write_loop(client_socket: trio.SocketStream |
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
         if not line:
             try:
-                line = bytes(send_buffer.popleft().strip()).encode('utf-8', errors='replace')
+                popline = send_buffer.popleft().strip()
+                if isinstance(popline, str):
+                    line = bytes(popline, 'utf8')
+                else:
+                    line = popline
                 await trio.lowlevel.checkpoint()
             except IndexError:
                 line = b''
@@ -424,9 +427,7 @@ async def write_loop(client_socket: trio.SocketStream |
                 continue
             except (trio.BrokenResourceError, trio.ClosedResourceError, gaierror,
                     trio.TooSlowError, OSError, BaseException) as exc:
-                print('write error! ' + which_sock + ' ' + str(exc) + ' '
-                      + str(exc.args) + ' LINE: ' + str(line))
-                raise EndSession('Write Error. ' + which_sock + ' ' + str(line))
+                print EndSession('Write Error. ' + which_sock + ' ' + str(line.decode()))
         await trio.sleep(0)
         raise EndSession('sockets closed.')
 
@@ -680,7 +681,8 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             await trio.sleep(0.100)
             continue
         except (BaseException, BaseExceptionGroup):
-            raise EndSession("proxy-server's connection to irc server closed.")
+            # raise EndSession("proxy-server's connection to irc server closed.")
+            raise
         if not read_sock:
             raise EndSession('irc-server closed connection to proxy.')
         read_line += read_sock
