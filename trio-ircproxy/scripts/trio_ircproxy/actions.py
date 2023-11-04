@@ -139,6 +139,12 @@ def send_ping(sc_socket: trio.SocketStream | trio.SSLStream, msg: str = ':TIMEOU
     return None
 
 async def send_quit(sc_socket):
+    """
+    Function is also located in socket_data. A change here must be changed there.
+
+    @param sc_socket:
+    @return:
+    """
     from ..website_and_proxy.socket_data import SocketData
     """Replace the quitmsg"""
     if not sc_socket:

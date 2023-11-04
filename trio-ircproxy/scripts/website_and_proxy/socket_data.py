@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import trio
-from actions import aclose_sockets
 from time import time
 from random import randint
 from collections import deque
@@ -25,6 +24,54 @@ def yes_no(msg: str = ''):
 
 
 system_data.load_settings()
+
+async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = None) -> None:
+    """Close both irc-server and irc-client sockets together
+
+     @param sc_socket: only one out of the two sockets is rqeuired
+     @return: None
+     :rtype: None
+
+     """
+    send_quit(sc_socket)
+    return None
+
+async def send_quit(sc_socket):
+    """
+    Function is also located in actions.py. A change here must be changed there.
+
+    @param sc_socket:
+    @return:
+    """
+    if not sc_socket:
+        return
+
+    if SocketData.which_socket[sc_socket] == 'cs':
+        client_socket = sc_socket
+        try:
+            other_socket = SocketData.mysockets[sc_socket]
+        except KeyError:
+            return
+    else:
+        other_socket = sc_socket
+        try:
+            client_socket = SocketData.mysockets[sc_socket]
+        except KeyError:
+            return
+
+    sc_send(other_socket, quitmsg())
+    sc_send(client_socket, quitmsg(to=client_socket))
+    await trio.sleep(5)
+    try:
+        socket_data.clear_data(other_socket)
+        await other_socket.aclose()
+    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
+        pass
+    try:
+        socket_data.clear_data(client_socket)
+        await client_socket.aclose()
+    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
+        pass
 
 
 class SocketData:
