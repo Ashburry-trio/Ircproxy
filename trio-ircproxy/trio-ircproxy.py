@@ -207,19 +207,7 @@ async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     :rtype: None
 
     """
-    try:
-        s2_socket = socket_data.mysockets[sc_socket]
-        socket_data.clear_data(s2_socket)
-        await s2_socket.aclose()
-    except BaseException:
-        try: await s2_socket.aclose()
-        except: pass
-    try:
-        socket_data.clear_data(sc_socket)
-        await sc_socket.aclose()
-    except (BaseException):
-        await sc_socket.aclose()
-
+    await actions.send_quit(sc_socket)
 
 class EndSession(BaseException):
     """
@@ -324,7 +312,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
                     with trio.fail_after(17.8):
                         await socket_data.raw_send(client_socket, None,
                                                    b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
-                        await aclose_sockets(sockets=(client_socket, None))
+                        await aclose_sockets(client_socket)
                 except (trio.TooSlowError, trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
                         trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
                         ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
@@ -342,7 +330,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
                 try:
                     await socket_data.raw_send(client_socket, None,
                                                b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
-                    await aclose_sockets(sockets=(client_socket, None))
+                    await aclose_sockets(client_socket)
                 except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
                         trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
                         ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
@@ -362,12 +350,10 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             # Write to server
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
     except (EndSession,):
-        socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
         return
     except BaseException as exx:
         print('BaseException #001A')
-        socket_data.clear_data(client_socket)
         await aclose_both(client_socket)
         return
     finally:
@@ -410,7 +396,7 @@ async def write_loop(client_socket: trio.SocketStream |
                 await trio.lowlevel.checkpoint()
             except IndexError:
                 line = b''
-                await trio.sleep(0.250)
+                await trio.sleep(0.150)
                 continue
             line += b"\r\n"
         with trio.fail_after(28):
@@ -422,14 +408,10 @@ async def write_loop(client_socket: trio.SocketStream |
                     await server_socket.send_all(line)
                 line = b''
                 continue
-            except (trio.BusyResourceError,):
-                await trio.sleep(0.120)
-                continue
-            except (trio.BrokenResourceError, trio.ClosedResourceError, gaierror,
-                    trio.TooSlowError, OSError, BaseException) as exc:
-                print EndSession('Write Error. ' + which_sock + ' ' + str(line.decode()))
+            except (trio.BusyResourceError, trio.ClosedResourceError, OSError, trio.TooSlowError) as exc:
+                raise EndSession('Write Error. ' + which_sock + ' ' + line.decode('utf8', errors='replace'))
         await trio.sleep(0)
-        raise EndSession('sockets closed.')
+        raise EndSession('write_loop: sockets closed.')
 
 
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
@@ -1093,13 +1075,13 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
         await cs_sent_connect.send_all(
             "HTTP/1.0 400 Bad Request. Requires proper http/1.0 protocol.\r\n\r\n".encode()
         )
-        await aclose_sockets(sockets=(cs_sent_connect,))
+        await aclose_sockets(cs_sent_connect)
         return None
     if words[0] != "connect":
         await cs_sent_connect.send_all(
             "HTTP/1.0 400 Bad Request. Proxy use only for IRC networks.\r\n\r\n".encode()
         )
-        await aclose_sockets(sockets=(cs_sent_connect,))
+        await aclose_sockets(cs_sent_connect)
         return None
     host: str = words[1]
 
@@ -1107,7 +1089,7 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
         await cs_sent_connect.send_all(
             "HTTP/1.0 400 Bad Request. Requires `server:port` to connect to.\r\n\r\n".encode()
         )
-        await aclose_sockets(sockets=(cs_sent_connect,))
+        await aclose_sockets(cs_sent_connect)
         return None
     server: str = ':'.join(host.split(":")[0:-1])
     port: str = host.split(":")[-1]
@@ -1117,7 +1099,7 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
         await cs_sent_connect.send_all(
             "HTTP/1.0 400 bad request. requires integer port number.\r\n\r\n".encode()
         )
-        await aclose_sockets(sockets=(cs_sent_connect,))
+        await aclose_sockets(cs_sent_connect)
         return None
 
     print('before_connect_sent_connect')
@@ -1182,8 +1164,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         hostname = 'unknown'
     print(hostname)
     if not check_fry_server(hostname):
-        socket_data.clear_data(cs_before_connect)
-        await aclose_sockets(sockets=(cs_before_connect,))
+        await aclose_sockets(cs_before_connect)
         print(':::::: FRY_SERVER TRIGGERED ::::::')
         return None
     socket_data.hostname[cs_before_connect] = hostname
@@ -1202,8 +1183,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             break
     if cancel_scope.cancelled_caught:
         # proxy_server_handler
-        socket_data.clear_data(cs_before_connect)
-        await aclose_sockets(sockets=(cs_before_connect,))
+        await aclose_sockets(cs_before_connect)
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
         await trio.lowlevel.checkpoint()
         raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
@@ -1235,8 +1215,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             print('authenicate')
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if not auth:
-            socket_data.clear_data(cs_before_connect)
-            await aclose_sockets(sockets=(cs_before_connect,))
+            await aclose_sockets(cs_before_connect)
             raise EndSession('Not authorized.')
         print("-----------------------\n")
         print(f'AUTH={str(auth)}')
@@ -1254,7 +1233,6 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         await before_connect_sent_connect(cs_before_connect, str_lines[0])
     finally:
         await aclose_both(cs_before_connect)
-        socket_data.clear_data(cs_before_connect)
 
     print('END OF proxy server handler')
 

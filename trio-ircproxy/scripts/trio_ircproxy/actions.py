@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-
+from trio import ClosedResourceError, BusyResourceError
 from pathlib import Path
 import trio
 import os
@@ -39,26 +39,19 @@ def sc_send(sc_socket: trio.SocketStream | trio.SSLStream, msg: str | bytes) -> 
     send_buffer.append(msg)
 
 
-async def aclose_sockets(sockets=None) -> None:
-    """Takes a list of sockets and closes them
+async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = None) -> None:
+    """Close both irc-server and irc-client sockets together
 
-        vars:
-            :param sockets: a list of sockets to close
-            :returns: None
-    """
-    if not sockets:
-        return
-    for sock in sockets:
-        if not sock:
-            continue
-        try:
-            await sock.aclose()
-        except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
-                ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
-            pass
+     @param sc_socket: only one out of the two sockets is rqeuired
+     @return: None
+     :rtype: None
+
+     """
+    send_quit(sc_socket)
+    return None
 
 
-def send_join(server_socket: trio.SocketStream | trio.SSLStream, chan_with_key: str) -> None:
+def send_join(server_socket: trio.SocketStream | trio.SSLStream, chan_with_key: str | None = None) -> None:
     """Join a channel
     vars:
         :@param server_socket: the socket to the irc-server
@@ -163,21 +156,23 @@ async def send_quit(sc_socket):
             client_socket = SocketData.mysockets[sc_socket]
         except KeyError:
             return
-    try:
-        sc_send(other_socket, quitmsg())
-    except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
-            ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
-        return
-    try:
-        sc_send(client_socket, quitmsg(to=client_socket))
-    except (trio.Cancelled, trio.BrokenResourceError, trio.ClosedResourceError, OSError, BrokenPipeError,
-            ConnectionAbortedError, ConnectionResetError, trio.TrioInternalError):
-        return
+
+    sc_send(other_socket, quitmsg())
+    sc_send(client_socket, quitmsg(to=client_socket))
     await trio.sleep(5)
-    await aclose_sockets(sockets=(other_socket, client_socket))
+    try:
+        socket_data.clear_data(other_socket)
+        await other_socket.aclose()
+    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
+        pass
+    try:
+        socket_data.clear_data(client_socket)
+        await client_socket.aclose()
+    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
+        pass
 
 
-def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> str:
+def quitmsg(msg: str | None = None, to: socket | None = None) -> str:
     """The default quit message for the app"""
     if not msg:
         # Send to server
@@ -185,11 +180,10 @@ def quitmsg(msg: str | None = None, to: Optional[socket] = None) -> str:
     msg = "QUIT :" + msg
     if to:
         # Send to client
-        if socket_data.mynick:
-            msg = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
-            print("MY NICK IS : " + socket_data.mynick[to])
-        else:
-            return ''
+        msg = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
+        print("MY NICK IS : " + socket_data.mynick[to])
+    else:
+        return ''
     return msg
 
 
@@ -263,9 +257,9 @@ def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, nick: str,
 
 def msg_to_client(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
     if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
-            or not msg or not isinstance(msg, str):
+            or not msg or (not isinstance(msg, str) and not not isinstance(msg, bytes)):
         return None
-    msg = "*mg-script!msg-script@www.mslscript.com + privmsg" \
+    msg = "*status!msg-script@www.mslscript.com + privmsg" \
           + socket_data.mynick[client_socket] + " :" + msg
     sc_send(client_socket, msg)
     return None
