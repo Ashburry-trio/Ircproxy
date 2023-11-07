@@ -1251,7 +1251,7 @@ async def start_proxy_listener():
     while '  ' in listen_ports:
         listen_ports = listen_ports.replace('  ', ' ')
 
-    listen_ports_list: list[str} = listen_ports.split(' ')
+    listen_ports_list: list[str] = listen_ports.split(' ')
     try:
         async with trio.open_nursery() as nursery:
             for f in listen_ports_list:
