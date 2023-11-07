@@ -1162,7 +1162,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     try:
         hostname: str = cs_before_connect.socket.getpeername()[0]
     except (socket.error):
-        # socket is closed
+        await cs_before_connect.aclose()
         return
     print(hostname)
     if not check_fry_server(hostname):
