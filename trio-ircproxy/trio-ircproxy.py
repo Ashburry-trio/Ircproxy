@@ -261,7 +261,6 @@ def get_words(text: str) -> list:
         while '\f' in lower_string:
             lower_string = lower_string.replace("\f", "")
         while '\t' in lower_string:
-        while '\t' in lower_string:
             lower_string = lower_string.replace("\t", "")
         return lower_string.split(' ')
     except (ValueError, TypeError):
@@ -1177,7 +1176,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             str_lines.append(usable_decode(line.strip()))
         del line
         if len(str_lines) > 1:
-            auth_list: list[str] = str_lines[]
+            auth_list: list[str] = str_lines
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if not auth:
             await aclose_sockets(cs_before_connect)
