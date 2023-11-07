@@ -1161,10 +1161,9 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     await trio.lowlevel.checkpoint()
     try:
         hostname: str = cs_before_connect.socket.getpeername()[0]
-    except (socket.error):
+    except trio.socket.error:
         await cs_before_connect.aclose()
         return
-    print(hostname)
     if not check_fry_server(hostname):
         await aclose_sockets(cs_before_connect)
         print(':::::: FRY_SERVER TRIGGERED ::::::')
