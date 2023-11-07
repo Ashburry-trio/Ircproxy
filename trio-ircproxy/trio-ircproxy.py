@@ -60,6 +60,7 @@ from scripts.website_and_proxy.users import validate_login, verify_user_pwdfile
 # from sys import excepthook
 # from sys import exc_info
 from socket import gaierror
+from socket import error
 from sys import argv
 from threading import Timer
 from time import time
@@ -215,7 +216,7 @@ class EndSession(BaseException):
     """
 
     def __init__(self, args: str | None = ''):
-        print('EndSession: '+str(args))
+        raise('EndSession: '+str(args))
 
 
 def usable_decode(text: bytes) -> str:
@@ -278,7 +279,6 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
 
 
     """
-    # print("making irc connection")
     ss_hostname = ss_hostname.lower()
     server_socket: trio.SSLStream | trio.SocketStream
     server_socket_nossl: trio.SocketStream
@@ -293,7 +293,6 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         if port in (6697, 9999, 443, 6699, 6999, 7070) \
                 or (port == 7000 and fnmatch(ss_hostname, '*.dal.net') == False) \
                 and False == fnmatch(ss_hostname, '*.undernet.org'):
-            print('creating SSL context')
             ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
             ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
             ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -404,7 +403,6 @@ async def write_loop(client_socket: trio.SocketStream |
                 if which_sock == 'cs':
                     await client_socket.send_all(line)
                 else:
-                    # print(b'TO Server: ' + line)
                     await server_socket.send_all(line)
                 line = b''
                 continue
@@ -484,7 +482,6 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     if split_line[0] == "part":
         chan = split_line[1].lstrip(':')
         chan = chan.lower()
-        print(F"PARTING CHANNEL {chan}")
         if nick_src == socket_data.mynick[client_socket]:
             socket_data.mychans[client_socket].discard(chan)
             ial.IALData.ial_remove_chan(client_socket, chan)
@@ -536,14 +533,11 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
             return False
         return None
     if split_line[0] == "353":
-        # /names
-        # print('Error With: '+single_line)
         if len(split_line) < 5:
             return None
         nicks: list[str]
         nicks = [split_line[4].lstrip(':')]
-        print(f'nicks: {nicks}')
-        print('remove full colon!')
+
         if len(split_line) > 5:
             nicks += split_line[5:]
         chan = split_line[3]
@@ -560,15 +554,11 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     if split_line[0] == '336':
         pass
     if split_line[0] == '322':
-        # print('add chan')
-        # /List channel usrs :topic
         pass
     if split_line[0] == '323':
-        print('done list')
-        # /List ENd of List
+        pass
     if split_line[0] == '321':
-        print('start list')
-        # /List starting list
+        pass
     if split_line[0] == 'away':
         try:
             awaymsg: str = ' '.join(single_line.split(' ')[1:])
@@ -686,7 +676,6 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             read_some = b''
             remain = read_line[read_some_found:]
             read_line = remain
-            # print(b'remaining: ' + read_line)
         if find_n == -1:
             read_str = ''
             read_strip = ''
@@ -740,7 +729,6 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
     ial_send = await ss_updateial(client_socket, server_socket, single_line, orig_upper_split)
     if ial_send is False:
-        print('IAL_SEND is False, no write!')
         await trio.sleep(0)
         return None
     source_line: str
@@ -823,11 +811,9 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     single_line = single_line.lower()
     split_line_low: list[str] = single_line.split(' ')
     split_line: list[str] = original_line.split(' ')
-    #print('client : ' + original_line)
     if split_line_low[0] == 'nick' and len(split_line) == 2:
         socket_data.mynick[client_socket] = split_line[1].lstrip(':')
     if split_line_low[0] == 'ping' or split_line_low[0] == 'pong':
-        # print(str(split_line_low))
         pass
     if split_line_low[0] == 'names':
         chan = split_line_low[1].lstrip(':')
@@ -844,7 +830,6 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     halt_on_yes: bool | None = False
     if split_line_low[1].startswith('.trio') or split_line_low[1].startswith('.proxy') or \
             split_line_low[1].startswith('.xdcc') or split_line_low[1].startswith('.py'):
-        print(str(split_line_low))
         halt_on_yes = cs_rcvd_command(client_socket, server_socket, original_line, split_line_low)
     if not halt_on_yes:
         actions.sc_send(dest_socket, original_line)
@@ -1050,9 +1035,7 @@ async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[
             break
         else:
             i += 1
-    print('verif_login')
     name: bool | str = verify_login(auth)
-    print('Name is: '+ str(name))
     return name
 
 
@@ -1067,7 +1050,6 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
             :@return: Returns None
 
     """
-    print('End of before connect')
     lower_words: str = byte_string.strip().lower()
     words: list[str] = get_words(lower_words)
 
@@ -1101,8 +1083,6 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
         )
         await aclose_sockets(cs_sent_connect)
         return None
-
-    print('before_connect_sent_connect')
     await proxy_make_irc_connection(cs_sent_connect, server, port_num)
 
 
@@ -1113,29 +1093,21 @@ def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
         :@return: bool True of ok False if not-ok
 
     """
-    print('verify_login Here')
     auth_pass: str = ''
     auth_user: str = ''
     try:
         auth_login: str = usable_decode(b64decode(auth_userlogin))
-        print('b64:' + auth_userlogin)
-        print('auth_login : '+auth_login)
-
         auth_user = auth_login[:auth_login.find(":")]
         auth_user = auth_user.strip()
         auth_user = auth_user.lower()
         auth_pass = auth_login[auth_login.find(":") + 1:]
-        print('entered USER ' + auth_user)
-        print('entered PASS ' + auth_pass)
         if not auth_pass or not auth_user or len(auth_user) > 50 or len(auth_pass) > 40:
             return False
         if auth_login.count(":") > 1 or auth_login.count(':') < 1 or auth_login.count(" ") > 0 \
                 or verify_user_pwdfile(auth_user, auth_pass) is False:
-            print('BAD PASSWORD / ' + "user: " + auth_user + ':' + auth_pass)
             return False
         return (auth_user, auth_pass)
     except ValueError:
-        print('BAD PASSWORD / ' + auth_user + '/u/' + auth_pass)
         return False
     finally:
         auth_pass = "a" * len(auth_pass)
@@ -1157,15 +1129,15 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         :@return: None
     """
     # Write down tries per minute for this IP. And just close them all if its too many.
-    print('proxy server handler')
+
     await trio.lowlevel.checkpoint()
     try:
         hostname: str = cs_before_connect.socket.getpeername()[0]
-    except trio.socket.error:
+    except error:
         await cs_before_connect.aclose()
         return
-    if not check_fry_server(hostname):
-        await aclose_sockets(cs_before_connect)
+    if not check_fry_serveostname):
+        await aclose_sockets(r(hcs_before_connect)
         print(':::::: FRY_SERVER TRIGGERED ::::::')
         return None
     socket_data.hostname[cs_before_connect] = hostname
@@ -1189,21 +1161,15 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
     print('finished print : \n' + usable_decode(byte_string_data))
     try:
-        print('tryiong 1')
         auth: bool | tuple[str, str] = False
         byte_string = usable_decode(byte_string_data).strip()
         while b'\r' in byte_string_data:
             byte_string_data = byte_string_data.replace(b"\r", b"\n")
-            print('in loop 1')
         while b"\n\n" in byte_string_data:
             byte_string_data = byte_string_data.replace(b"\n\n", b"\n")
-            print('in loop 2')
         while b"  " in byte_string_data:
             byte_string_data = byte_string_data.replace(b"  ", b" ")
-            print('in loop 3')
-        print('tryiong 2')
         lines: list[bytes] = byte_string_data.split(b"\n")
-        print('Try: ' + str(lines))
         while b'' in lines:
             lines.remove(b'')
         str_lines: [str] = []
@@ -1211,14 +1177,11 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             str_lines.append(usable_decode(line.strip()))
         del line
         if len(str_lines) > 1:
-            auth_list: list[str] = str_lines[1:]
-            print('authenicate')
+            auth_list: list[str] = str_lines[]
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if not auth:
             await aclose_sockets(cs_before_connect)
             raise EndSession('Not authorized.')
-        print("-----------------------\n")
-        print(f'AUTH={str(auth)}')
         socket_data.login[cs_before_connect] = auth[0]
         if cs_before_connect not in socket_data.state:
             socket_data.state[cs_before_connect] = {}
@@ -1228,13 +1191,9 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             if auth[0].lower() not in system_data.user_settings['by_username']:
                 system_data.user_settings['by_username'][auth[0].lower()] = set()
             system_data.user_settings['by_username'][auth[0]].add(cs_before_connect)
-
-        print('Line 1 :'+str_lines[0])
         await before_connect_sent_connect(cs_before_connect, str_lines[0])
     finally:
         await aclose_both(cs_before_connect)
-
-    print('END OF proxy server handler')
 
 
 async def start_proxy_listener():
@@ -1245,7 +1204,6 @@ async def start_proxy_listener():
         Settings_ini.add_section('settings')
 
     listen_ports: str = system_data.Settings_ini["settings"].get("listen_ports", '4321')
-    print('-+')
     listen_ports = listen_ports.replace(',', ' ').replace(';', ' ').replace('  ', ' ') \
         .replace('*', '').replace('+', '')
     while '  ' in listen_ports:
