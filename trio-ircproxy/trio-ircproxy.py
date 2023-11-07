@@ -261,6 +261,7 @@ def get_words(text: str) -> list:
         while '\f' in lower_string:
             lower_string = lower_string.replace("\f", "")
         while '\t' in lower_string:
+        while '\t' in lower_string:
             lower_string = lower_string.replace("\t", "")
         return lower_string.split(' ')
     except (ValueError, TypeError):
@@ -1130,14 +1131,13 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     """
     # Write down tries per minute for this IP. And just close them all if its too many.
 
-    await trio.lowlevel.checkpoint()
     try:
         hostname: str = cs_before_connect.socket.getpeername()[0]
     except error:
         await cs_before_connect.aclose()
         return
-    if not check_fry_serveostname):
-        await aclose_sockets(r(hcs_before_connect)
+    if not (check_fry_serverhostname):
+        await aclose_sockets(cs_before_connect)
         print(':::::: FRY_SERVER TRIGGERED ::::::')
         return None
     socket_data.hostname[cs_before_connect] = hostname
