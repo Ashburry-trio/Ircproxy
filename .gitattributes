@@ -31,6 +31,7 @@
         *.sh text
         *.py text
         *.bat text
+	*.gitattributes text
 
         # These files are binary and should be left untouched
         # (binary is a macro for -text -diff)
@@ -48,6 +49,7 @@
         *.flv binary
         *.fla binary
         *.swf binary
+	*.ogg bnary
         *.gz binary
         *.zip binary
         *.7z binary

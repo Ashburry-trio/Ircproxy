@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 """
@@ -154,7 +154,7 @@ def check_mirc_exploit(proto: str) -> bool:
     proto: str = str(proto)
     proto = proto.strip(':')
     proto = proto.lower()
-    proto_split: list[str, ...] = proto.split(' ')
+    proto_split: list[str] = proto.split(' ')
     nick: bool = False
     if len(proto_split) > 1 and (proto_split[1] == '004' or proto_split[1] == '322'):
         return False
@@ -419,7 +419,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        single_line: str, split_line: list[str]) -> \
         bool | None:
     """The function execution chain in reverse is
-    updateial...() -> ss_got_line...() then fast_line()
+    updateial() -> ss_got_line() then fast_line()
     there is also another one on the same path but instead
     of this function it is ss_parse_line(). Client data
     is not checked except for in the case of DCC connections.
@@ -439,7 +439,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     upper_nick_full_src: str
     original_line: str = single_line
     orig_upper_split: list[str] = single_line.split(' ')
-    split_line: list[str, ...] = single_line.lower().split()
+    split_line: list[str] = single_line.lower().split()
     nick_src: str = single_line.split(' ')[0].split('!')[0].lower()
     src_nick_full: str = single_line.split(' ')[0].lower()
     upper_nick_src: str
@@ -540,7 +540,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
         # print('Error With: '+single_line)
         if len(split_line) < 5:
             return None
-        nicks: list[str, ...]
+        nicks: list[str]
         nicks = [split_line[4].lstrip(':')]
         print(f'nicks: {nicks}')
         print('remove full colon!')
@@ -651,7 +651,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
     read_line: bytes = b''
     read_str: str = ''
     read_strip: str = ''
-    read_split: list[None | str, ...] = []
+    read_split: list[None | str] = []
     read_some: bytes
     read_some_found: int
     find_n: int = -1
@@ -699,7 +699,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
 
 async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
                            server_socket: trio.SocketStream | trio.SSLStream, single_line: str,
-                           split_line: list[str, ...]) -> None:
+                           split_line: list[str]) -> None:
     """Received a complete line of text and process here
 
         @param client_socket: socket to the irc-client
@@ -821,8 +821,8 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     #     return
     original_line = single_line
     single_line = single_line.lower()
-    split_line_low: list[str, ...] = single_line.split(' ')
-    split_line: list[str, ...] = original_line.split(' ')
+    split_line_low: list[str] = single_line.split(' ')
+    split_line: list[str] = original_line.split(' ')
     #print('client : ' + original_line)
     if split_line_low[0] == 'nick' and len(split_line) == 2:
         socket_data.mynick[client_socket] = split_line[1].lstrip(':')
@@ -1025,7 +1025,7 @@ def check_fry_server(ip_addy: tuple | list | str) -> bool:
     return True
 
 
-async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[str, ...]) -> bool | tuple[str, str]:
+async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[str]) -> bool | tuple[str, str]:
     """Check for bad login attverify_userempt
         parameters:
 
@@ -1152,16 +1152,18 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     """Handle a connection to the proxy server.
                         Accept proxy http/1.0 protocol.
         vars:
-        :@param cs_before_connect: the live ...................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------socket already accepted and
+        :@param cs_before_connect: the socket already accepted and
                         ready for reading (1 byte at a time).
         :@return: None
     """
     # Write down tries per minute for this IP. And just close them all if its too many.
     print('proxy server handler')
+    await trio.lowlevel.checkpoint()
     try:
         hostname: str = cs_before_connect.socket.getpeername()[0]
-    except gaierror:
-        hostname = 'unknown'
+    except (socket.error):
+        # socket is closed
+        return
     print(hostname)
     if not check_fry_server(hostname):
         await aclose_sockets(cs_before_connect)
@@ -1182,7 +1184,6 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
                 continue
             break
     if cancel_scope.cancelled_caught:
-        # proxy_server_handler
         await aclose_sockets(cs_before_connect)
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
         await trio.lowlevel.checkpoint()
@@ -1202,16 +1203,16 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             byte_string_data = byte_string_data.replace(b"  ", b" ")
             print('in loop 3')
         print('tryiong 2')
-        lines: list[bytes, ...] = byte_string_data.split(b"\n")
+        lines: list[bytes] = byte_string_data.split(b"\n")
         print('Try: ' + str(lines))
         while b'' in lines:
             lines.remove(b'')
-        str_lines: [str, ...] = []
+        str_lines: [str] = []
         for line in lines:
             str_lines.append(usable_decode(line.strip()))
         del line
         if len(str_lines) > 1:
-            auth_list: list[str, ...] = str_lines[1:]
+            auth_list: list[str] = str_lines[1:]
             print('authenicate')
             auth = await authenticate_proxy(cs_before_connect, auth_list)
         if not auth:
@@ -1251,7 +1252,7 @@ async def start_proxy_listener():
     while '  ' in listen_ports:
         listen_ports = listen_ports.replace('  ', ' ')
 
-    listen_ports_list: list[str, ...] = listen_ports.split(' ')
+    listen_ports_list: list[str} = listen_ports.split(' ')
     try:
         async with trio.open_nursery() as nursery:
             for f in listen_ports_list:
