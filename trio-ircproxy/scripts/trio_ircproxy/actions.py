@@ -187,7 +187,7 @@ def send_all(fto: trio.SocketStream | trio.SSLStream, msg: str) -> None:
         for send in fto:
             sc_send(send, msg)
     else:
-        sc_send(to, msg)
+        sc_send(fto, msg)
 
 
 
