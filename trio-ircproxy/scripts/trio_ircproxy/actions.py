@@ -159,24 +159,24 @@ async def send_quit(sc_socket):
             client_socket = SocketData.mysockets[sc_socket]
     except (KeyError):
         return
-    quitmsg(to=client_socket)
+    quitmsg(fto=client_socket)
 
 
 
-def quitmsg(msg: str | None = None, to: trio.SocketStream | trio.SSLStream | None = None) -> str:
+def quitmsg(msg: str | None = None, fto: trio.SocketStream | trio.SSLStream | None = None) -> str:
     """The default quit message for the app"""
     from ..website_and_proxy.socket_data import SocketData
     if not msg:
         # Send to server
         msg: str = "\x02Machine-Gun script\x02 from \x1fhttps://www.mslscript.com\x1f"
     msg = "QUIT :" + msg
-    send_all(socket_data.mysockets[to], msg)
+    send_all(socket_data.mysockets[fto], msg)
     if to:
         # Send to client
-        msg: str = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
-        send_all(to, to=msg)
-        SocketData.clear_data(to)
-        print("MY NICK IS : " + socket_data.mynick[to])
+        msg: str = ':' + socket_data.mynick[fto] + "!trio-ircproxy.py@www.mslscript.com " + msg
+        send_all(to, msg=msg)
+        SocketData.clear_data(fto)
+        print("MY NICK IS : " + socket_data.mynick[fto])
     else:
         return ''
     return msg
