@@ -38,40 +38,26 @@ async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = 
 
 async def send_quit(sc_socket):
     """
-    Function is also located in actions.py. A change here must be changed there.
+    Function is also located in socket_data. A change here must be changed there.
 
     @param sc_socket:
     @return:
     """
+    from ..website_and_proxy.socket_data import SocketData
+    """Replace the quitmsg"""
     if not sc_socket:
         return
 
-    if SocketData.which_socket[sc_socket] == 'cs':
-        client_socket = sc_socket
-        try:
+    try:
+        if SocketData.which_socket[sc_socket] == 'cs':
+            client_socket = sc_socket
             other_socket = SocketData.mysockets[sc_socket]
-        except KeyError:
-            return
-    else:
-        other_socket = sc_socket
-        try:
+        else:
+            other_socket = sc_socket
             client_socket = SocketData.mysockets[sc_socket]
-        except KeyError:
-            return
-
-    sc_send(other_socket, quitmsg())
-    sc_send(client_socket, quitmsg(to=client_socket))
-    await trio.sleep(5)
-    try:
-        socket_data.clear_data(other_socket)
-        await other_socket.aclose()
-    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
-        pass
-    try:
-        socket_data.clear_data(client_socket)
-        await client_socket.aclose()
-    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
-        pass
+    except (KeyError):
+        return
+    await send_quit_quit(other_socket, client_socket)
 
 
 class SocketData:
@@ -198,7 +184,7 @@ class SocketData:
         try:
             other = cls.mysockets[xxs]
         except KeyError:
-            other = None
+            return
         try:
             if cls.which_socket[xxs] == "cs":
                 client_socket = xxs

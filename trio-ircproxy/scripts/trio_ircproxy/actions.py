@@ -150,47 +150,45 @@ async def send_quit(sc_socket):
     if not sc_socket:
         return
 
-    if SocketData.which_socket[sc_socket] == 'cs':
-        client_socket = sc_socket
-        try:
+    try:
+        if SocketData.which_socket[sc_socket] == 'cs':
+            client_socket = sc_socket
             other_socket = SocketData.mysockets[sc_socket]
-        except KeyError:
-            return
-    else:
-        other_socket = sc_socket
-        try:
+        else:
+            other_socket = sc_socket
             client_socket = SocketData.mysockets[sc_socket]
-        except KeyError:
-            return
-
-    sc_send(other_socket, quitmsg())
-    sc_send(client_socket, quitmsg(to=client_socket))
-    await trio.sleep(5)
-    try:
-        socket_data.clear_data(other_socket)
-        await other_socket.aclose()
-    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
-        pass
-    try:
-        socket_data.clear_data(client_socket)
-        await client_socket.aclose()
-    except (trio.ClosedResourceError, trio.BusyResourceError, OSError):
-        pass
+    except (KeyError):
+        return
+    quitmsg(to=client_socket)
 
 
-def quitmsg(msg: str | None = None, to: socket | None = None) -> str:
+
+def quitmsg(msg: str | None = None, to: trio.SocketStream | trio.SSLStream | None = None) -> str:
     """The default quit message for the app"""
+    from ..website_and_proxy.socket_data import SocketData
     if not msg:
         # Send to server
-        msg = "\x02Machine-Gun script\x02 from \x1fhttps://www.mslscript.com\x1f"
+        msg: str = "\x02Machine-Gun script\x02 from \x1fhttps://www.mslscript.com\x1f"
     msg = "QUIT :" + msg
+    send_all(socket_data.mysockets[to], msg)
     if to:
         # Send to client
-        msg = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
+        msg: str = ':' + socket_data.mynick[to] + "!trio-ircproxy.py@www.mslscript.com " + msg
+        send_all(to, to=msg)
+        SocketData.clear_data(to)
         print("MY NICK IS : " + socket_data.mynick[to])
     else:
         return ''
     return msg
+
+
+def send_all(fto: trio.SocketStream | trio.SSLStream, msg: str) -> None:
+    if isinstance(fto, list) or isinstance(fto, tuple):
+        for send in fto:
+            sc_send(send, msg)
+    else:
+        sc_send(to, msg)
+
 
 
 def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:

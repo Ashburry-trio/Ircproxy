@@ -192,11 +192,6 @@ def is_socket(xs: trio.SocketStream | trio.SSLStream) -> bool:
         return False
     if xs not in socket_data.mysockets:
         return False
-    if socket_data.which_socket[xs] == 'cs':
-        if xs not in socket_data.mynick:
-            return False
-    if xs not in socket_data.send_buffer:
-        return False
     return True
 
 
@@ -1135,7 +1130,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     except error:
         await cs_before_connect.aclose()
         return
-    if not (check_fry_serverhostname):
+    if not (check_fry_server):
         await aclose_sockets(cs_before_connect)
         print(':::::: FRY_SERVER TRIGGERED ::::::')
         return None
