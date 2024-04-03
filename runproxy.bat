@@ -18,36 +18,40 @@ echo please wait...
 IF EXIST ".\activate.bat" (
     call ".\activate.bat"
     goto end1
-    ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\" (
-        call "%UserProfile%\Documents\trio-ircproxy-main\activate.bat"
+    ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy-main\" (
+        call "%UserProfile%\Documents\Ircproxy-main\activate.bat"
         goto end1
-    ) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\" (
+    ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy\" (
         call "%UserProfile%\Documents\trio-ircproxy\activate.bat"
         goto end1
-    ) ELSE IF EXIST "%UserProfile%\trio-ircproxy-main\" (
-        call "%UserProfile%\trio-ircproxy-main\activate.bat"
+    ) ELSE IF EXIST "%UserProfile%\Ircproxy-main\" (
+        call "%UserProfile%\Ircproxy-main\activate.bat"
         goto end1
+    ) ELSE IF EXIST "%UserProfile%\Ircproxy\" (
+        call "%UserProfile%\Ircproxy\activate.bat"
+        goto end1
+
 )
 echo ERROR, unable to find "activate.bat"
 goto done
 :end1
 IF EXIST "trio-ircproxy\trio-ircproxy.py" (
-    python .\trio-ircproxy\trio-ircproxy.py
+    python.exe .\trio-ircproxy\trio-ircproxy.py
     goto done
-) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\" (
-        python "%UserProfile%\Documents\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
+) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy-main\trio-ircproxy\" (
+        python.exe "%UserProfile%\Documents\Ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
-) ELSE IF EXIST "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\" (
-        python "%UserProfile%\Documents\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy\trio-ircproxy\" (
+        python.exe "%UserProfile%\Documents\Ircproxy\trio-ircproxy\trio-ircproxy.py"
         goto done
-) ELSE IF EXIST "%UserProfile%\trio-ircproxy-main\trio-ircproxy\" (
-        python "%UserProfile%\trio-ircproxy-main\trio-ircproxy\trio-ircproxy.py"
+) ELSE IF EXIST "%UserProfile%\Ircproxy-main\trio-ircproxy\" (
+        python.exe "%UserProfile%\Ircproxy-main\trio-ircproxy\trio-ircproxy.py"
         goto done
-) ELSE IF EXIST "%UserProfile%\trio-ircproxy\trio-ircproxy\" (
-        python "%UserProfile%\trio-ircproxy\trio-ircproxy\trio-ircproxy.py"
+) ELSE IF EXIST "%UserProfile%\Ircproxy\trio-ircproxy\" (
+        python.exe "%UserProfile%\Ircproxy\trio-ircproxy\trio-ircproxy.py"
         goto done
 )
-echo ERROR, Unable to find "trio-ircproxy.py"
+echo ERROR Unable to find "trio-ircproxy.py"
 :done
 call "deactivate.bat"
 echo finished "deactivate.bat"
