@@ -1,35 +1,34 @@
 #!/usr/bin/python#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""
-Windows:
-    "install.bat -3.11"  -+-+- (just once, forever. USe your hihgest installed python version)
-    "runproxy.bat"
-        or
-    "runproxy.bat"
 
-
-use the install.bat -3.11 if you are on windows with Python 3.11. It just sets up venv and
- installs pip, upgrades pip, and installs requirements.txt.
- You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat and then
-  "python.exe .\trio-ircproxy\trio-ircproxy.py"
-
-
-Linux:
-    cd trio-ircproxy-main
-    python3.11 -m venv ./trio-ircproxy/venv
-    source ./trio-ircproxy/venv/bin/activate     <- different for distros of linux
-    pip3 install -r ./trio-ircproxy/requirements.txt
-    python ./trio-ircproxy/trio-ircproxy.py
-
+# Windows:
+#    "install.bat -3.11"  -+-+- (just once, forever. USe your hihgest installed python version)
+#    "runproxy.bat"
+#        or
+#    "runproxy.bat"
+#
+#
+# use the install.bat -3.11 if you are on windows with Python 3.11. It just sets up venv and
+# installs pip, upgrades pip, and installs requirements.txt.
+# You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat and then
+#  "python.exe .\trio-ircproxy\trio-ircproxy.py"
+#
+#
+# Linux:
+#    cd trio-ircproxy-main
+#    python3.11 -m venv ./trio-ircproxy/venv
+#    source ./trio-ircproxy/venv/bin/activate     <- different for distros of linux
+#    pip3 install -r ./trio-ircproxy/requirements.txt
+#    python ./trio-ircproxy/trio-ircproxy.py
+#
 #  If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
 #  After executing the above commands you only need to execute the following
 #  two commands to run the proxy server:
 #    source ./trio-ircproxy/venv/bin/activate  <- different for different terminals in linux
 #    python ./trio-ircproxy/trio-ircproxy.py
-
-I need to create an install script for Linux and the runproxy.bat for Linux
-"""
+#
+# I need to create an install script for Linux and the runproxy.bat for Linux
 
 from __future__ import annotations
 

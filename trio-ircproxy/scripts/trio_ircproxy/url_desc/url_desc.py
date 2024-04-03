@@ -2,14 +2,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import http3
-#import requests
+import requests
 
 
 async def get_url_desc(url):
-    client = http3.AsyncClient()
-    page = await client.get(url)
-    # page = requests.get(url)
+    page = requests.get(url)
     page_text: str = page.text
     while '\n' in page_text:
         page_text = page_text.replace('\n', '')
@@ -41,5 +38,5 @@ async def get_url_desc(url):
     tit_desc = (url, title, desc)
     return tit_desc
 
-class URLFloodError(Exception):
+class URLFloodError(BaseException):
     pass

@@ -1,10 +1,10 @@
 @echo off
 cls
 echo.
-if "%1" == "-3.11.15" goto start
-if "%1" == "-3.10" goto start
+set pythonversion=%1
+if defined pythonversion goto :start
+echo ERROR: You must run install.bat with a python version parameter. Example: "install.bat -3.8"
 echo.
-echo ERROR: You must run install.bat with a python version parameter. Example: "install.bat -3.8" (to -3.13).
 goto complete
 :start
 echo Ctrl+C to Exit
