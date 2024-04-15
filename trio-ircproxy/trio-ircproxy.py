@@ -213,10 +213,6 @@ class EndSession(BaseException):
     An BaseException to raise when paired sockets are closed.
     """
 
-    def __init__(self, args: str | None = ''):
-        raise('EndSession: '+str(args))
-
-
 def usable_decode(text: bytes) -> str:
     """Decode the text so it can be used.
         vars:
@@ -346,15 +342,12 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[client_socket], 'cs')
             # Write to server
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
-    except (EndSession,):
-        await aclose_both(client_socket)
-        return
-    except BaseException as exx:
-        print('BaseException #001A')
+    except BaseException:
         await aclose_both(client_socket)
         return
     finally:
         # proxy_make_irc_connection()
+        print('-')
         print("connections were closed. nursery finished.")
 
 
@@ -1008,11 +1001,8 @@ def check_fry_server(ip_addy: tuple | list | str) -> bool:
     return True
 
 
-async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[str]) -> bool | tuple[str, str]:
-    """Check for bad login attverify_userempt
-        parameters:
-
-        :client_socket: client socket
+async def authenticate_proxy(auth_lines: list[str]) -> bool | str:
+    """Check for bad login attempt parameters:
         :auth_lines: the remaining lines of text after the first line
 
     """
@@ -1020,10 +1010,12 @@ async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[
     len_lines: int = len(auth_lines)
     auth: str
     while True:
-        if i > len_lines:
+        if i > len_lines or len_lines == 0:
+            del i
+            del auth
             del len_lines
             del auth_lines
-            raise EndSession('Bad Login')
+            return False
         auth = auth_lines[i].lower()
         if "proxy-authorization: basic" in auth:
             auth = auth_lines[i].split(" ")[2]
@@ -1033,8 +1025,9 @@ async def authenticate_proxy(client_socket: trio.SocketStream, auth_lines: list[
             break
         else:
             i += 1
-    name: bool | str = verify_login(auth)
-    return name
+    auth_user_pass: bool | list[str] = verify_login(auth)
+    del i, auth, auth_lines, len_lines
+    return auth_user_pass
 
 
 async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
@@ -1141,7 +1134,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     port = f'{cs_before_connect.socket.getsockname()[1]}'
     socket_data.echo(cs_before_connect, "Accepted a client connection " + hostname + " on port " + str(port) + '...')
     byte_string_data: bytes = b''
-    auth: bool | None | tuple[str, str]
+    auth: bool | None | tuple[str, str] | list[str, str]
     bytes_data: bytes
     byte_string: str = ''
     with trio.move_on_after(60) as cancel_scope:
@@ -1156,10 +1149,8 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
         await trio.lowlevel.checkpoint()
         raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
-    print('finished print : \n' + usable_decode(byte_string_data))
     try:
-        auth: bool | tuple[str, str] = False
-        byte_string = usable_decode(byte_string_data).strip()
+        auth = False
         while b'\r' in byte_string_data:
             byte_string_data = byte_string_data.replace(b"\r", b"\n")
         while b"\n\n" in byte_string_data:
@@ -1174,11 +1165,10 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             str_lines.append(usable_decode(line.strip()))
         del line
         if len(str_lines) > 1:
-            auth_list: list[str] = str_lines
-            auth = await authenticate_proxy(cs_before_connect, auth_list)
+            auth = await authenticate_proxy(str_lines)
         if not auth:
             await aclose_sockets(cs_before_connect)
-            raise EndSession('Not authorized.')
+            return
         socket_data.login[cs_before_connect] = auth[0]
         if cs_before_connect not in socket_data.state:
             socket_data.state[cs_before_connect] = {}
@@ -1223,8 +1213,7 @@ async def start_proxy_listener():
             print(
                 '\nERROR: the listening port is being used somewhere else. '
                 + 'maybe trio-ircproxy.py is already running somewhere?')
-        else:
-            await quit_all()
+        await quit_all()
         # print("EXC: " + str(exc.args))
         print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
         try:

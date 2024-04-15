@@ -23,10 +23,10 @@ def yes_no(msg: str = ''):
         return False
 
 
-def sc_send(sc_socket: trio.SocketStream | trio.SSLStream, msg: str | bytes) -> None:
+def sc_send(sc_socket: trio.SocketStream | trio.SSLStream = None, msg: str | bytes = None) -> None:
     """Relay text to client
     """
-    if not sc_socket:
+    if not sc_socket or not msg:
         return
     if not isinstance(msg, bytes):
         msg = msg.encode("utf8", errors="replace")
@@ -61,7 +61,8 @@ def send_join(server_socket: trio.SocketStream | trio.SSLStream, chan_with_key: 
     """
     if not server_socket:
         return None
-    sc_send(server_socket, "join :" + chan_with_key)
+    ck_split = chan_with_key.split(' ')
+    sc_send(server_socket, "JOIN " + ck_split[0] + ':' + ck_split[1:])
     return None
 
 
@@ -106,8 +107,6 @@ def ss_send_ctcpreply(server_socket: trio.SocketStream | trio.SSLStream, nick: s
         :@return: None
 
     """
-    if not server_socket:
-        return None
     ctcp_reply = f"NOTICE {nick} :\x01{ctcp} {reply_str}\x01"
     sc_send(server_socket, ctcp_reply)
     return None
@@ -138,7 +137,7 @@ def send_ping(sc_socket: trio.SocketStream | trio.SSLStream, msg: str = ':TIMEOU
     sc_send(sc_socket, str('PING ' + msg).strip())
     return None
 
-async def send_quit(sc_socket):
+async def send_quit(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """
     Function is also located in socket_data. A change here must be changed there.
 
@@ -158,29 +157,26 @@ async def send_quit(sc_socket):
             other_socket = sc_socket
             client_socket = SocketData.mysockets[sc_socket]
     except (KeyError):
-        return
-    quitmsg(fto=client_socket)
+        return None
+    quitmsg(client_socket=client_socket)
+    return None
 
 
-
-def quitmsg(msg: str | None = None, fto: trio.SocketStream | trio.SSLStream | None = None) -> str:
+def quitmsg(msg: str | None = None, client_socket: trio.SocketStream | trio.SSLStream | None = None) -> None:
     """The default quit message for the app"""
     from ..website_and_proxy.socket_data import SocketData
     if not msg:
         # Send to server
-        msg: str = "\x02Machine-Gun script\x02 from \x1fhttps://www.mslscript.com\x1f"
+        msg: str = "\x02Trio-IRCProxy.py\x02"
     msg = "QUIT :" + msg
-    send_all(socket_data.mysockets[fto], msg)
-    if to:
+    send_all(socket_data.mysockets[client_socket], msg)
+    if fto:
         # Send to client
         msg: str = ':' + socket_data.mynick[fto] + "!trio-ircproxy.py@www.mslscript.com " + msg
-        send_all(to, msg=msg)
-        SocketData.clear_data(fto)
+        send_all(client_socket, msg=msg)
         print("MY NICK IS : " + socket_data.mynick[fto])
-    else:
-        return ''
-    return msg
-
+        SocketData.clear_data(client_socket)
+    return None
 
 def send_all(fto: trio.SocketStream | trio.SSLStream, msg: str) -> None:
     if isinstance(fto, list) or isinstance(fto, tuple):
@@ -188,7 +184,7 @@ def send_all(fto: trio.SocketStream | trio.SSLStream, msg: str) -> None:
             sc_send(send, msg)
     else:
         sc_send(fto, msg)
-
+    return None
 
 
 def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
@@ -263,7 +259,7 @@ def msg_to_client(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -
     if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
             or not msg or (not isinstance(msg, str) and not not isinstance(msg, bytes)):
         return None
-    msg = "*status!msg-script@www.mslscript.com + privmsg" \
+    msg = "*status!msg-script@www.myproxyip.com + privmsg" \
           + socket_data.mynick[client_socket] + " :" + msg
     sc_send(client_socket, msg)
     return None

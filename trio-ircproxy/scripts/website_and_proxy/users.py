@@ -16,7 +16,7 @@ def status_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> N
     if not msg.startswith(':'):
         msg = ':' + msg
     from scripts.website_and_proxy.socket_data import SocketData
-    msg = ':*STATUS!trio-ircproxy.py@www.mslscript.com PRIVMSG ' + SocketData.mynick[client_socket] + ' '+msg + '\r\n'
+    msg = ':*Proxy!trio-ircproxy.py@www.myproxyip.com PRIVMSG ' + SocketData.mynick[client_socket] + ' '+msg + '\r\n'
     if client_socket in SocketData.send_buffer:
         SocketData.send_buffer[client_socket].append(msg)
     return None
@@ -78,28 +78,27 @@ def validate_login(name: str, email: str, password: str):
 
 
 def verify_user_pwdfile(name: str, password: str) -> bool | str:
-    password = sha256(password.encode("utf8")).hexdigest()
+    # password = sha256(password.encode("utf8")).hexdigest()
     if exists(user_file):
         with open(user_file, 'r') as sfopen:
             sfread: str = sfopen.read().strip()
-            sfread_list: List[str] = sfread.split('\n')
+        sfread_list: list[str] = sfread.split('\n')
     else:
+        print('users.dat file does not exist')
         return False
     i = 0
     line: str
-    line_split: list[str, ...]
+    line_split: list[str]
     for line in sfread_list:
         line = line.strip()
         if ':' not in line:
             continue
         line_split = line.split(':')
-        if len(line_split) != 4:
+        if len(line_split) != 3:
             continue
-        if line_split[0] == name.lower():
-            if line_split[3] == password:
-                return line_split[2]
-            else:
-                return False
+        if line_split[0].lower() == name.lower():
+            if line_split[2] == password:
+                return (line_split[0], line_split[2])
     return False
 
 

@@ -33,7 +33,7 @@ async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = 
      :rtype: None
 
      """
-    send_quit(sc_socket)
+    await send_quit(sc_socket)
     return None
 
 async def send_quit(sc_socket):
@@ -51,13 +51,13 @@ async def send_quit(sc_socket):
     try:
         if SocketData.which_socket[sc_socket] == 'cs':
             client_socket = sc_socket
-            other_socket = SocketData.mysockets[sc_socket]
+            server_socket = SocketData.mysockets[sc_socket]
         else:
-            other_socket = sc_socket
+            server_socket = sc_socket
             client_socket = SocketData.mysockets[sc_socket]
     except (KeyError):
         return
-    await send_quit_quit(other_socket, client_socket)
+    await send_quit_quit(server_socket, client_socket)
 
 
 class SocketData:
