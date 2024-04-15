@@ -3,32 +3,36 @@
 
 
 # Windows:
-#    "install.bat -3.11"  -+-+- (just once, forever. USe your hihgest installed python version)
+#    "install.bat -3.11"  -+-+- (just once, forever. Use your highest installed python version)
 #    "runproxy.bat"
-#        or
+#        or just; after you have ran installed.bat
 #    "runproxy.bat"
 #
 #
-# use the install.bat -3.11 if you are on windows with Python 3.11. It just sets up venv and
-# installs pip, upgrades pip, and installs requirements.txt.
-# You also have runproxy.bat which is a shortcut to trio-ircproxy\venv\Scripts\activate.bat and then
+# use the install.bat -3.11 if you are on windows with Python 3.11. It just sets up a virtual-environment
+# and installs pip, upgrades pip, and installs requirements.txt.
+# You also have runproxy.bat which is a shortcut to .\trio-ircproxy\venv\Scripts\activate.bat and then
 #  "python.exe .\trio-ircproxy\trio-ircproxy.py"
 #
 #
 # Linux:
-#    cd trio-ircproxy-main
+#    cd ~/Ircproxy
 #    python3.11 -m venv ./trio-ircproxy/venv
-#    source ./trio-ircproxy/venv/bin/activate     <- different for distros of linux
-#    pip3 install -r ./trio-ircproxy/requirements.txt
-#    python ./trio-ircproxy/trio-ircproxy.py
+#    source ./trio-ircproxy/venv/bin/activate     <- different for each distro of linux
+# python -m pip --require-virtualenv install pip
+# python -m pip --require-virtualenv install --upgrade pip
+# pip --require-virtualenv install wheel
+# pip --require-virtualenv install -r .\trio-ircproxy\requirements.txt
+# python ./trio-ircproxy/trio-ircproxy.py
 #
 #  If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
 #  After executing the above commands you only need to execute the following
-#  two commands to run the proxy server:
+#  two commands to run the proxy server (on Linux):
 #    source ./trio-ircproxy/venv/bin/activate  <- different for different terminals in linux
 #    python ./trio-ircproxy/trio-ircproxy.py
 #
-# I need to create an install script for Linux and the runproxy.bat for Linux
+# I need to create an install script for Linux and the runproxy.bat for Linux.
+# It will be tricky since different distros use different activation scripts.
 
 from __future__ import annotations
 
@@ -56,8 +60,8 @@ from scripts.website_and_proxy.socket_data import SocketData as socket_data
 from scripts.website_and_proxy.socket_data import aclose_sockets
 from scripts.website_and_proxy.system_data import SystemData as system_data
 from scripts.website_and_proxy.users import validate_login, verify_user_pwdfile
-# from sys import excepthook
-# from sys import exc_info
+from sys import excepthook
+from sys import exc_info
 from socket import gaierror
 from socket import error
 from sys import argv
@@ -285,8 +289,8 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         return None
     try:
         if port in (6697, 9999, 443, 6699, 6999, 7070) \
-                or (port == 7000 and fnmatch(ss_hostname, '*.dal.net') == False) \
-                and False == fnmatch(ss_hostname, '*.undernet.org'):
+                or (port == 7000 and (fnmatch(ss_hostname, '*.dal.net') == False) \
+                and False == fnmatch(ss_hostname, '*.undernet.org')):
             ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
             ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
             ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -1204,6 +1208,8 @@ async def start_proxy_listener():
 
     listen_ports_list: list[str] = listen_ports.split(' ')
     try:
+        print('-')
+        print("Started Proxy-Server. Default login is 'user : pass'")
         async with trio.open_nursery() as nursery:
             for f in listen_ports_list:
                 if not f.isdigit():
@@ -1219,13 +1225,12 @@ async def start_proxy_listener():
                 + 'maybe trio-ircproxy.py is already running somewhere?')
         else:
             await quit_all()
-        print("EXC: " + str(exc.args))
+        # print("EXC: " + str(exc.args))
         print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
-        raise
-        # try:
-        #    sys.exit(13)
-        # except SystemExit:
-        #    os._exit(130)
+        try:
+            sys.exit(13)
+        except SystemExit:
+            os._exit(130)
 
 
 async def quit_all() -> None:
