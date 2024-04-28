@@ -201,12 +201,13 @@ def is_socket(xs: trio.SocketStream | trio.SSLStream) -> bool:
 async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """Close both irc-server and irc-client sockets together
 
-    @param sc_socket: only one out of the two sockets is rqeuired
-    @return: None
+    :@param sc_socket: only one out of the two sockets is required. Can be normal or SSL, client-proxy or irc-server.
+    :return: None
     :rtype: None
 
     """
     await actions.send_quit(sc_socket)
+    return None
 
 class EndSession(BaseException):
     """
@@ -221,6 +222,8 @@ def usable_decode(text: bytes) -> str:
 
     """
     try:
+        if text == b'':
+            return ''
         decoded_text: str
         decoded_text = text.decode("utf8")
     except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
@@ -238,39 +241,40 @@ def usable_decode(text: bytes) -> str:
                     return ''
     return decoded_text
 
+def handle_newline(text: str) -> str:
+    while '\r' in text:
+        text = text.replace("\r", "")
+    while '\f' in text:
+        text = text.replace("\f", "")
+    while '\t' in text:
+        text = text.replace("\t", "")
+    while '\n' in text:
+        text = text.replace("\n", "")
+    return text
 
 def get_words(text: str) -> list:
     """Returns the words list of the first line in list
 
         vars:
             :@param text: A string of text with lines ending in cr, lf, and crlf
-            :@return: a list of words split on whitespace.
+            :@return: a list of words split on whitespaces
 
     """
-    try:
-        text = text.strip()
-        lower_string: str = text.lower()
-        while '\r' in lower_string:
-            lower_string = lower_string.replace("\r", "")
-        while '\f' in lower_string:
-            lower_string = lower_string.replace("\f", "")
-        while '\t' in lower_string:
-            lower_string = lower_string.replace("\t", "")
-        return lower_string.split(' ')
-    except (ValueError, TypeError):
-        return ['']
+    text = text.strip()
+    lower_string: str = text.lower()
+    lower_string = handle_newline(lower_string)
+    return lower_string.split(' ')
+
 
 
 async def proxy_make_irc_connection(client_socket: trio.SocketStream
                                                    | trio.SSLStream, ss_hostname: str, port: int) -> None:
     """Make a connection to the IRC network and fail (502) if unable to connect.
     vars:
-        :type server: str
-        :@param client_socket: the client socket
-        :@param server: a string of the server to connect to
-        :@param port: the port number to connect to (integer)
-        :@return: returns None
-
+        :param client_socket: the client socket holding the connection to the IRC client
+        :param ss_hostname: a string of the server hostname or IP to connect to
+        :param port: the port number to connect to (digit)
+        :return: returns None
 
     """
     ss_hostname = ss_hostname.lower()
@@ -286,7 +290,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
     try:
         if port in (6697, 9999, 443, 6699, 6999, 7070) \
                 or (port == 7000 and (fnmatch(ss_hostname, '*.dal.net') == False) \
-                and False == fnmatch(ss_hostname, '*.undernet.org')):
+                and (False == fnmatch(ss_hostname, '*.undernet.org'))):
             ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
             ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
             ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -310,6 +314,7 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
                         trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
                         ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
                         ConnectionError, BaseException):
+                    await aclose_sockets(client_socket)
                     return None
 
         else:
@@ -332,7 +337,6 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         await trio.sleep(0.280)
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ':' + str(port)
-
         async with trio.open_nursery() as nursery:
             # Server_socket marked by 'ss' as the last parameter, writes to cs
             nursery.start_soon(socket_received_chunk, client_socket, server_socket, 'ss')
@@ -1030,53 +1034,6 @@ async def authenticate_proxy(auth_lines: list[str]) -> bool | str:
     return auth_user_pass
 
 
-async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
-                                                       | trio.SSLStream, byte_string: str) -> None:
-    """The socket is in a state where the client has just sent the CONNECT
-    protocol statement but has not received an reply yet.
-
-        vars:
-            :@param cs_sent_connect: the client socket
-            :@param byte_string: string the first line received from client_socket
-            :@return: Returns None
-
-    """
-    lower_words: str = byte_string.strip().lower()
-    words: list[str] = get_words(lower_words)
-
-    if len(words) < 3 or len(words) > 3:
-        await cs_sent_connect.send_all(
-            "HTTP/1.0 400 Bad Request. Requires proper http/1.0 protocol.\r\n\r\n".encode()
-        )
-        await aclose_sockets(cs_sent_connect)
-        return None
-    if words[0] != "connect":
-        await cs_sent_connect.send_all(
-            "HTTP/1.0 400 Bad Request. Proxy use only for IRC networks.\r\n\r\n".encode()
-        )
-        await aclose_sockets(cs_sent_connect)
-        return None
-    host: str = words[1]
-
-    if ":" not in host:
-        await cs_sent_connect.send_all(
-            "HTTP/1.0 400 Bad Request. Requires `server:port` to connect to.\r\n\r\n".encode()
-        )
-        await aclose_sockets(cs_sent_connect)
-        return None
-    server: str = ':'.join(host.split(":")[0:-1])
-    port: str = host.split(":")[-1]
-    try:
-        port_num: int = int(port)
-    except ValueError:
-        await cs_sent_connect.send_all(
-            "HTTP/1.0 400 bad request. requires integer port number.\r\n\r\n".encode()
-        )
-        await aclose_sockets(cs_sent_connect)
-        return None
-    await proxy_make_irc_connection(cs_sent_connect, server, port_num)
-
-
 def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
     """Validate user: pass login attempt
 
@@ -1109,6 +1066,7 @@ def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
         del auth_userlogin
         del auth_pass
         del auth_user
+
 
 
 async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
@@ -1158,17 +1116,23 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         while b"  " in byte_string_data:
             byte_string_data = byte_string_data.replace(b"  ", b" ")
         lines: list[bytes] = byte_string_data.split(b"\n")
-        while b'' in lines:
-            lines.remove(b'')
-        str_lines: [str] = []
+        str_lines: list[str] = []
         for line in lines:
             str_lines.append(usable_decode(line.strip()))
         del line
+        i = 0
+        while True:
+            if i >= len(str_lines):
+                break
+            if (str_lines[i]) == '':
+                del str_lines[i]
+                continue
+            i += 1
         if len(str_lines) > 1:
             auth = await authenticate_proxy(str_lines)
         if not auth:
             await aclose_sockets(cs_before_connect)
-            return
+            return None
         socket_data.login[cs_before_connect] = auth[0]
         if cs_before_connect not in socket_data.state:
             socket_data.state[cs_before_connect] = {}
@@ -1177,10 +1141,57 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
                 system_data.user_settings['by_username'] = {}
             if auth[0].lower() not in system_data.user_settings['by_username']:
                 system_data.user_settings['by_username'][auth[0].lower()] = set()
-            system_data.user_settings['by_username'][auth[0]].add(cs_before_connect)
+            system_data.user_settings['by_username'][auth[0].lower()].add(cs_before_connect)
         await before_connect_sent_connect(cs_before_connect, str_lines[0])
     finally:
         await aclose_both(cs_before_connect)
+
+
+async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
+                                                       | trio.SSLStream, byte_string: str) -> None:
+    """The socket is in a state where the client has just sent the CONNECT
+    protocol statement but has not received an reply yet.
+
+        vars:
+            :@param cs_sent_connect: the client socket
+            :@param byte_string: string the first line received from client_socket
+            :@return: Returns None
+
+    """
+    lower_words: str = byte_string.strip().lower()
+    words: list[str] = get_words(lower_words)
+
+    if len(words) < 3 or len(words) > 3:
+        await cs_sent_connect.send_all(
+            "HTTP/1.0 400 Bad Request. Requires proper http/1.0 protocol.\r\n\r\n".encode()
+        )
+        await aclose_sockets(cs_sent_connect)
+        return None
+    if words[0] != "connect":
+        await cs_sent_connect.send_all(
+            "HTTP/1.0 400 Bad Request. Proxy use only for IRC networks.\r\n\r\n".encode()
+        )
+        await aclose_sockets(cs_sent_connect)
+        return None
+    host: str = words[1]
+
+    if ":" not in host:
+        await cs_sent_connect.send_all(
+            "HTTP/1.0 400 Bad Request. Requires `server:port` to connect to.\r\n\r\n".encode()
+        )
+        await aclose_sockets(cs_sent_connect)
+        return None
+    server: str = ':'.join(host.split(":")[0:-1])
+    port: str = host.split(":")[-1]
+    try:
+        port_num: int = int(port)
+    except ValueError:
+        await cs_sent_connect.send_all(
+            "HTTP/1.0 400 bad request. requires integer port number.\r\n\r\n".encode()
+        )
+        await aclose_sockets(cs_sent_connect)
+        return None
+    await proxy_make_irc_connection(cs_sent_connect, server, port_num)
 
 
 async def start_proxy_listener():
@@ -1207,19 +1218,22 @@ async def start_proxy_listener():
                 nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(f))
                 print("proxy is ready, listening on port " + str(f))
             print("press Ctrl+C to quit...\n")
-    except (EndSession, BaseException, BaseExceptionGroup, Exception,
+    except (EndSession, BaseException, BaseExceptionGroup,
             KeyboardInterrupt, OSError, gaierror) as exc:
         if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):
             print(
                 '\nERROR: the listening port is being used somewhere else. '
                 + 'maybe trio-ircproxy.py is already running somewhere?')
-        await quit_all()
-        # print("EXC: " + str(exc.args))
-        print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
-        try:
-            sys.exit(13)
-        except SystemExit:
-            os._exit(130)
+
+            await quit_all()
+            # print("EXC: " + str(exc.args))
+        else:
+            raise
+    print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
+    try:
+        sys.exit(13)
+    except SystemExit:
+        os._exit(130)
 
 
 async def quit_all() -> None:
