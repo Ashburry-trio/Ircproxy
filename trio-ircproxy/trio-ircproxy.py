@@ -379,18 +379,23 @@ async def write_loop(client_socket: trio.SocketStream |
 
     """
     line: bytes = b''
+    line_count: int = 0
     while (client_socket in socket_data.mysockets) and (server_socket in socket_data.mysockets):
         if not line:
             try:
                 popline = send_buffer.popleft().strip()
+                line_count += 1
                 if isinstance(popline, str):
-                    line = bytes(popline, 'utf8')
+                    line = popline.encode('utf8', errors="replace")
                 else:
                     line = popline
-                await trio.lowlevel.checkpoint()
             except IndexError:
                 line = b''
-                await trio.sleep(0.150)
+                if line_count == 0:
+                    line_count = 0
+                    await trio.sleep(1.000)
+                line_count = 0
+                await trio.sleep(0.180)
                 continue
             line += b"\r\n"
         with trio.fail_after(28):
@@ -400,11 +405,13 @@ async def write_loop(client_socket: trio.SocketStream |
                 else:
                     await server_socket.send_all(line)
                 line = b''
+                if line_count == 10:
+                    line_count = 0
+                    await trio.sleep(0.125)
                 continue
-            except (trio.BusyResourceError, trio.ClosedResourceError, OSError, trio.TooSlowError) as exc:
-                raise EndSession('Write Error. ' + which_sock + ' ' + line.decode('utf8', errors='replace'))
-        await trio.sleep(0)
-        raise EndSession('write_loop: sockets closed.')
+            except (trio.BusyResourceError,trio.ClosedResourceError, OSError, gaierror, trio.TooSlowError,
+                    ExceptionGroup, BaseException, BaseExceptionGroup, EndSession, trio.BrokenResourceError):
+                raise EndSession('Write Error. ' + which_sock)
 
 
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
@@ -617,11 +624,10 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
     """Read loop to receive data from the socket and pass it to
         fast_line_split_for_read_loop()
 
-        :@param client_socket: client socket stream
-        :@param server_socket: irc server socket stream
-        :@return: returns if the nursery needs to be closed.
+        :client_socket: client socket stream
+        :server_socket: irc server socket stream
+        :return: returns if the nursery needs to be closed.
     """
-    await trio.lowlevel.checkpoint()
     if 'connecting' == socket_data.state[client_socket]['doing']:
         socket_data.state[client_socket]['doing'] = 'signing on'
         socket_data.echo(client_socket, 'connected to ' + socket_data.hostname[server_socket])
@@ -636,18 +642,20 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
     read_line: bytes = b''
     read_str: str = ''
     read_strip: str = ''
-    read_split: list[None | str] = []
+    read_split: list[str] = []
     read_some: bytes
     read_some_found: int
     find_n: int = -1
     read_sock: bytes = b''
+    read_count: int = 0
     while True:
         try:
-            read_sock = await dest_socket.receive_some(10555)
+            read_sock = await dest_socket.receive_some(65536)
         except trio.BusyResourceError:
             await trio.sleep(0.100)
             continue
-        except (BaseException, BaseExceptionGroup):
+        except (BaseException, BaseExceptionGroup, ExceptionGroup, trio.BrokenResourceError, trio.ClosedResourceError,
+                trio.CancelledResourceError, trio.IncompleteReadError):
             # raise EndSession("proxy-server's connection to irc server closed.")
             raise
         if not read_sock:
@@ -655,11 +663,13 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
         read_line += read_sock
         read_sock = b''
         while True:
+            read_count = 0
             find_n = read_line.find(b'\n')
             if find_n == -1:
                 break
-            read_some_found = find_n + 1
-            read_some = read_line[0:find_n + 1]
+            read_count += 1
+            read_some_found = find_n + 1  # increase by one to read the find_n-1 character
+            read_some = read_line[0:find_n + 1] # increase by one to account for 0 start
             read_str = usable_decode(read_some)
             read_str = read_str.strip()
             read_strip = lower_color_and_strip(read_str)
@@ -671,13 +681,19 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             read_some = b''
             remain = read_line[read_some_found:]
             read_line = remain
+            if read_count == 10:
+                read_count = 0
+                await trio.sleep(0)
         if find_n == -1:
             read_str = ''
             read_strip = ''
             read_split = []
             read_sock = b''
             find_n = -1
-            await trio.sleep(0.180)
+            if read_line:
+                await trio.sleep(0.115)
+            else:
+                await trio.sleep(0.244)
     return None
 
 
@@ -722,7 +738,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     else:
         orig_upper_split = original_line.split(' ')
 
-    ial_send = await ss_updateial(client_socket, server_socket, single_line, orig_upper_split)
+    ial_send = await ss_updateial(client_socket, server_socket, single_line, # single_line is lowercase
+                                  orig_upper_split)
     if ial_send is False:
         await trio.sleep(0)
         return None
@@ -774,13 +791,11 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         socket_data.state[client_socket]['upper_nick'] = orig_upper_split[2]
         socket_data.set_face_nicknet(client_socket)
     elif split_line[0] == '301':
-        reason = " ".join(orig_upper_split[4:]).strip(':\r\n ')
-        msg = f":www.mslscript.com NOTICE {socket_data.mynick[client_socket]}" \
+        reason = " ".join(orig_upper_split[4:]).strip(':\r\n\t ')
+        msg = f":www.myircproxyip.com NOTICE {socket_data.mynick[client_socket]}" \
               f" :User {orig_upper_split[3]} is" \
               f" set away, reason: {reason}"
         actions.sc_send(client_socket, msg)
-        return None
-
     actions.sc_send(client_socket, original_line)
     await trio.sleep(0)
     return None
@@ -872,12 +887,11 @@ def dur_replace(in_words: str) -> str:
     @param in_words: The words of the time duration string
     @return: string
     """
-    in_words = in_words.replace('week', 'wks')
-    in_words = in_words.replace('day', 'dys')
-    in_words = in_words.replace('hour', 'hrs')
-    in_words = in_words.replace('minute', 'mins')
-    in_words = in_words.replace('second', 'secs')
-    in_words = in_words.replace('ss', 's')
+    in_words = in_words.replace('week', 'wk')
+    in_words = in_words.replace('day', 'dy')
+    in_words = in_words.replace('hour', 'hr')
+    in_words = in_words.replace('minute', 'min')
+    in_words = in_words.replace('second', 'sec')
     return in_words
 
 
@@ -891,10 +905,10 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     @return: None
 
     """
-    prefix = ':www.mslscript.com 375 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + 'www.mslscript.com Message of the Day -')
-    prefix = ':www.mslscript.com 372 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + '\x02www.mslscript.com MOTD\x02 -')
+    prefix = ':www.myircproxyip.com 375 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + 'www.myircproxyip.com Message of the Day -')
+    prefix = ':www.myircproxyip.com 372 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + '\x02www.myircproxyip.com MOTD\x02 -')
     actions.sc_send(client_socket, prefix)
     actions.sc_send(client_socket, prefix + 'To connect to a SSL port, '
                                             '\x02DO NOT\x02 prefix the port with -')
@@ -915,9 +929,9 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
                                             "\x02/motd\x02 -")
     actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Machine-Gun mSL script"
                                             " official website: -")
-    actions.sc_send(client_socket, prefix + "W-W-W: \x1fhttps://www.mSLscript.com/\x1f -")
+    actions.sc_send(client_socket, prefix + "W-W-W: \x1fhttps://www.myIrcProxyIP.com/\x1f -")
     actions.sc_send(client_socket, prefix + "'X-Clacks-Overhead':\x02 'GNU Terry Pratchett' \x02-")
-    prefix = ':www.mslscript.com 376 ' + mynick + ' :- '
+    prefix = ':www.myircproxyip.com 376 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + 'End of /MOTD -')
     return None
 
@@ -939,7 +953,7 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
 
     if len(split_line) >= 2 and split_line[0] == '.colour':
         actions.sc_send(client_socket,
-                        ':ashburry!mg-script@www.mslscript.com privmsg ashburry :colour is: ' + str(
+                        ':ashburry!mg-script@www.myircproxyip.com privmsg ashburry :colour is: ' + str(
                             ord(split_line[1][0]))
                         + ' = ' + split_line[1][0])
         # yes_halt = True to NOT send to server

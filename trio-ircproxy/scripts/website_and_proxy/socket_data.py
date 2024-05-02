@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import trio
+from trio import SocketStream, SSLStream
 from time import time
 from random import randint
 from collections import deque
-from typing import Dict, Deque, Set
+from typing import Dict, Deque, Set, Union
 from system_data import SystemData as system_data
 from socket import gaierror
 
@@ -61,30 +62,33 @@ async def send_quit(sc_socket):
 
 
 class SocketData:
-    current_count: Dict[trio.SocketStream | trio.SSLStream | None, int | None]
-    send_buffer: Dict[trio.SocketStream | trio.SSLStream | None, Deque[str | bytes | None]] = {}
-    mynick: Dict[trio.SocketStream | trio.SSLStream | None, str | None] = {}
-    myial: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
-    myial_chan: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
-    mychans: Dict[trio.SocketStream | trio.SSLStream | None, Set[str | None]] = {}
-    mysockets: Dict[trio.SocketStream | trio.SSLStream | None, trio.SocketStream | trio.SSLStream | None] = {}
-    raw_005: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | int | None]] = {}
-    dcc_send: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
-    dcc_chat: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | None]] = {}
-    dcc_null: Dict[trio.SocketStream | trio.SSLStream | None, bool | None] = {}
-    conn_timeout: Dict[trio.SocketStream | trio.SSLStream | None, int | None] = {}
-    state: Dict[trio.SocketStream | trio.SSLStream | None, Dict[str | None, str | int | time | Set[str] | None]] = {}
-    login: Dict[trio.SocketStream | trio.SSLStream | None, str | bool | None] = {}
-    hostname: Dict[trio.SocketStream | trio.SSLStream | None, str | None] = {}
-    which_socket: Dict[trio.SocketStream | trio.SSLStream | None, str | None] = {}
-    user_power: dict[None | str, list[trio.SocketStream | trio.SSLStream] | None] | None = {}
-    msg_count_send_buffer: Dict[trio.SocketStream | trio.SSLStream | None, int | None] = {}
+    current_count: Dict[trio.SocketStream | trio.SSLStream, int]
+    send_buffer: Dict[trio.SocketStream | trio.SSLStream, Deque[str | bytes]] = {}
+    mynick: Dict[trio.SocketStream | trio.SSLStream, str] = {}
+    myial: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
+    myial_chan: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
+    mychans: Dict[trio.SocketStream | trio.SSLStream, Set[str]] = {}
+    mysockets: Dict[trio.SocketStream | trio.SSLStream, trio.SocketStream | trio.SSLStream] = {}
+    raw_005: Dict[trio.SocketStream | trio.SSLStream , Dict[str, str | int]] = {}
+    dcc_send: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
+    dcc_chat: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
+    dcc_null: Dict[trio.SocketStream | trio.SSLStream, bool] = {}
+    conn_timeout: Dict[trio.SocketStream | trio.SSLStream, int] = {}
+    state: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int | time | Set[str]] = {}
+    login: Dict[trio.SocketStream | trio.SSLStream, str | bool] = {}
+    hostname: Dict[trio.SocketStream | trio.SSLStream, str] = {}
+    which_socket: Dict[trio.SocketStream | trio.SSLStream, str] = {}
+    user_power: dict[str, list[trio.SocketStream | trio.SSLStream]] = {}
+    msg_count_send_buffer: Dict[trio.SocketStream | trio.SSLStream, int] = {}
     @classmethod
     def create_data(cls, client_socket: trio.SocketStream | trio.SSLStream,
                     server_socket: trio.SocketStream | trio.SSLStream):
-        """Create socket data,
-          ...  put all data into one location
-        """
+          """
+    Create socket data and store all the necessary information in one location.
+    Args:
+        client_socket (trio.SocketStream | trio.SSLStream): The client socket.
+        server_socket (trio.SocketStream | trio.SSLStream): The server socket.
+    """
         cls.which_socket[client_socket] = 'cs'
         cls.which_socket[server_socket] = 'ss'
         cls.login[client_socket] = ''
@@ -115,7 +119,7 @@ class SocketData:
         cls.raw_005[client_socket]["chanlimit"] = "#:250"
         cls.raw_005[client_socket]["kicklen"] = 180
         cls.raw_005[client_socket]["maxtargets"] = 4
-        cls.raw_005[client_socket]["maxlist"] = "bie:250"
+        cls.raw_005[client_socket]["maxlist"] = "b:250"   # "bIe:250"
         cls.raw_005[client_socket]["chanmodes"] = "b,k,l,psnmt"
         cls.raw_005[client_socket]["network"] = "no_network_" + str(randint(100, 9999))
         cls.send_buffer[server_socket] = deque()
@@ -129,18 +133,33 @@ class SocketData:
 
     @classmethod
     async def raw_send(cls, to_socket: trio.SocketStream | trio.SSLStream,
-                       other_socket: trio.SocketStream | trio.SSLStream | None | False = None,
+                       other_sockets: list[trio.SocketStream | trio.SSLStream] | None | False = None,
                        msg: str | bytes = '') -> bool:
-        if not msg:
+        """
+        Sends a raw message to a given socket.
+        Args:
+            to_socket (trio.SocketStream | trio.SSLStream): The socket to send the message to.
+            other_socket (trio.SocketStream | trio.SSLStream | None | False, optional): The other socket to send the message to. Defaults to None.
+            msg (str | bytes, optional): The message to send. Defaults to ''.
+        Returns:
+            bool: True if the message was sent successfully, False otherwise.
+        """
+        if not msg or not to_socket:
             return False
-        with trio.fail_after(40):
+        with trio.fail_after(10):
             try:
-                await trio.sleep(0)
                 if not isinstance(msg, bytes):
-                    msg = msg.encode()
+                    msg = msg.encode('utf-8',errors='replace')
+                if not msg.endswith(b'\n'):
+                    msg += b'\n'
                 await to_socket.send_all(msg)
+                if other_sockets:
+                    for other_socket in other_sockets:
+                        if other_socket is not to_socket:
+                            await other_socket.send_all(msg)
             except (trio.BrokenResourceError, trio.ClosedResourceError, gaierror,
-                    trio.TooSlowError, OSError, trio.BusyResourceError):
+                    trio.TooSlowError, OSError, trio.BusyResourceError, ExceptionGroup, BaseException,
+                    BaseExceptionGroup):
                 return False
             return True
 
