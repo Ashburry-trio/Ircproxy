@@ -124,7 +124,7 @@ lint/tmp/
 # venv
 venv/
 # docs
-docs/*
+#docs/*
 # __pycache__
 trio-ircproxy/scripts/__pycache__/
 trio-ircproxy/scripts/trio_ircproxy/__pycache__/
