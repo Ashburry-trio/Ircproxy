@@ -74,7 +74,7 @@ class SocketData:
     dcc_chat: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
     dcc_null: Dict[trio.SocketStream | trio.SSLStream, bool] = {}
     conn_timeout: Dict[trio.SocketStream | trio.SSLStream, int] = {}
-    state: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int | time | Set[str]] = {}
+    state: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int | time | Set[str]]] = {}
     login: Dict[trio.SocketStream | trio.SSLStream, str | bool] = {}
     hostname: Dict[trio.SocketStream | trio.SSLStream, str] = {}
     which_socket: Dict[trio.SocketStream | trio.SSLStream, str] = {}
@@ -83,12 +83,12 @@ class SocketData:
     @classmethod
     def create_data(cls, client_socket: trio.SocketStream | trio.SSLStream,
                     server_socket: trio.SocketStream | trio.SSLStream):
-          """
-    Create socket data and store all the necessary information in one location.
-    Args:
-        client_socket (trio.SocketStream | trio.SSLStream): The client socket.
-        server_socket (trio.SocketStream | trio.SSLStream): The server socket.
-    """
+        """
+        Create socket data and store all the necessary information in one location.
+        Vars:
+            :client_socket: The client socket.
+            :server_socket: The server socket.
+        """
         cls.which_socket[client_socket] = 'cs'
         cls.which_socket[server_socket] = 'ss'
         cls.login[client_socket] = ''

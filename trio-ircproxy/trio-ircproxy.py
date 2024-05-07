@@ -225,20 +225,16 @@ def usable_decode(text: bytes) -> str:
         if text == b'':
             return ''
         decoded_text: str
-        decoded_text = text.decode("utf8")
+        decoded_text = text.decode("latin1")
     except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
         try:
-            decoded_text = text.decode("latin1")
+            decoded_text = text.decode("utf-8")
         except (UnicodeWarning, EncodingWarning, UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
-            try:
-                # detect encoding:
-                det = detect(text)
-                decoded_text = text.decode(det['encoding'], errors="replace")
-            except (UnicodeDecodeError, UnicodeError, UnicodeTranslateError):
-                return ''
-            except (EncodingWarning, UnicodeWarning,) as exp:
-                if not decoded_text:
-                    return ''
+            # detect encoding:
+            det = detect(text)
+            return text.decode(det['encoding'], errors="replace")
+
+
     return decoded_text
 
 def handle_newline(text: str) -> str:
@@ -346,7 +342,8 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[client_socket], 'cs')
             # Write to server
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
-    except BaseException:
+    except (EndSession, OSError, MemoryError, OverflowError, RuntimeError, WindowsError,
+            BlockingIOError, BaseException, BaseExceptionGroup):
         await aclose_both(client_socket)
         return
     finally:
@@ -386,7 +383,7 @@ async def write_loop(client_socket: trio.SocketStream |
                 popline = send_buffer.popleft().strip()
                 line_count += 1
                 if isinstance(popline, str):
-                    line = popline.encode('utf8', errors="replace")
+                    line = popline.encode('latin1', errors="replace")
                 else:
                     line = popline
             except IndexError:
@@ -900,13 +897,13 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     motd from website, after connection and old motd has been sent. Notify user if there
     is a new motd, "/msg *status motd" for the latest.
 
-    @param client_socket: the socket to the irc-client
-    @param mynick: the string of irc-client nickname to send the MOTD to
-    @return: None
+    :client_socket: the socket to the irc-client
+    :mynick: the string of irc-client nickname to send the MOTD to
+    :returns: None
 
     """
     prefix = ':www.myircproxyip.com 375 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + 'www.myircproxyip.com Message of the Day -')
+    actions.sc_send(client_socket, prefix + www_url + '  Message of the Day -')
     prefix = ':www.myircproxyip.com 372 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + '\x02www.myircproxyip.com MOTD\x02 -')
     actions.sc_send(client_socket, prefix)
@@ -940,12 +937,12 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
                     server_socket: trio.SocketStream | trio.SSLStream,
                     single_line: str, split_line: list[str]) -> bool | None:
     """Received a command from the irc-client
-
-    @param client_socket: socket to irc-client
-    @param server_socket: socket to irc-server
-    @param single_line: single line string of text
-    @param split_line: single_line split on words
-    @return: bool of True to not relay to irc-server or None to relay to irc-server
+    Vars:
+        :client_socket: socket to irc-client
+        :server_socket: socket to irc-server
+        :single_line: single line string of text
+        :split_line: single_line split on words
+        :returns: bool of True to not relay to irc-server or None to relay to irc-server
 
     """
 
@@ -959,19 +956,19 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
         # yes_halt = True to NOT send to server
         return True
     # Change to privmsg to *STATUS
-    if '.xdcc' in split_line[0]:
-        xdcc_system.xdcc_commands(client_socket, server_socket, single_line, split_line)
-        return True
-    if '.trio' in split_line[0] or '.proxy' in split_line[0]:
-        proxy_commands.commands(client_socket, server_socket, single_line, split_line)
-        return True
-    if (split_line[0] == '.url') and (len(split_line) == 2):
-        chan = single_line.split(' ')[1]
-        url, title, desc = get_url_desc(split_line[1].lstrip(':'))
-        chan = chan
-        actions.sc_send(server_socket, f'privmsg {chan} :URL: {url}')
-        actions.sc_send(server_socket, f'privmsg {chan} :Title: {title}')
-        actions.sc_send(server_socket, f'privmsg {chan} :Description: {desc}')
+    # if '.xdcc' in split_line[0].lstrip(':'):
+    #     xdcc_system.xdcc_commands(client_socket, server_socket, single_line, split_line)
+    #     return True
+    # if '.trio' in split_line[0].lstrip(':') or '.proxy' in split_line[0]:
+    #     proxy_commands.commands(client_socket, server_socket, single_line, split_line)
+    #     return True
+    # if 'url' in split_line[0].lstrip(':') and (len(split_line) >= 3):
+    #     chan = single_line[1]
+    #     url = ' '.join(split_line[2:])
+    #     url, title, desc = get_url_desc(url)
+    #     actions.sc_send(server_socket, f'privmsg {chan} :URL: {url}')
+    #     actions.sc_send(server_socket, f'privmsg {chan} :Title: {title}')
+    #     actions.sc_send(server_socket, f'privmsg {chan} :Description: {desc}')
     return None
 
 
@@ -1021,7 +1018,8 @@ def check_fry_server(ip_addy: tuple | list | str) -> bool:
 
 async def authenticate_proxy(auth_lines: list[str]) -> bool | str:
     """Check for bad login attempt parameters:
-        :auth_lines: the remaining lines of text after the first line
+        Vars:
+            :auth_lines: the remaining lines of text after the first line loops
 
     """
     i: int = 0
@@ -1050,9 +1048,9 @@ async def authenticate_proxy(auth_lines: list[str]) -> bool | str:
 
 def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
     """Validate user: pass login attempt
-
-        :@param auth_userlogin: The `user: pass` login attempt
-        :@return: bool True of ok False if not-ok
+    Vars:
+        :auth_userlogin: The `user: pass` login attempt
+        :returns: bool True of ok False if not-ok
 
     """
     auth_pass: str = ''
@@ -1062,7 +1060,7 @@ def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
         auth_user = auth_login[:auth_login.find(":")]
         auth_user = auth_user.strip()
         auth_user = auth_user.lower()
-        auth_pass = auth_login[auth_login.find(":") + 1:]
+        auth_pass = auth_login[auth_login.find(":") + 1:].strip()
         if not auth_pass or not auth_user or len(auth_user) > 50 or len(auth_pass) > 40:
             return False
         if auth_login.count(":") > 1 or auth_login.count(':') < 1 or auth_login.count(" ") > 0 \
@@ -1217,7 +1215,7 @@ async def start_proxy_listener():
 
     listen_ports: str = system_data.Settings_ini["settings"].get("listen_ports", '4321')
     listen_ports = listen_ports.replace(',', ' ').replace(';', ' ').replace('  ', ' ') \
-        .replace('*', '').replace('+', '')
+        .replace('*', '').replace('+', '').strip()
     while '  ' in listen_ports:
         listen_ports = listen_ports.replace('  ', ' ')
 
