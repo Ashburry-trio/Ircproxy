@@ -2,6 +2,7 @@ git+https://github.com/python-trio/trio.git
 git+https://github.com/python-validators/validators
 git+https://github.com/DiffSK/configobj
 git+https://github.com/encode/httpx
+translate
 pyshark
 chardet
 argparse>=1.4.0

@@ -1,3 +1,4 @@
+
 #!/usr/bin/python#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
@@ -72,7 +73,8 @@ from chardet import detect
 import sys
 import os
 from cryptography.fernet import Fernet
-
+WWW_SHORT_URL = 'www.myircproxyip.com'
+WWW_LONG_URL = 'https://wwww.myircproxyip.com/'
 _dir = path.dirname(path.abspath(__file__))
 chdir(realpath(dirname(expanduser(argv[0]))))
 
@@ -275,62 +277,26 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
     """
     ss_hostname = ss_hostname.lower()
     server_socket: trio.SSLStream | trio.SocketStream
-    server_socket_nossl: trio.SocketStream
     try:
         granted: bytes = b"HTTP/1.0 200 connection started with irc server.\r\n\r\n"
         if not await socket_data.raw_send(client_socket, None, granted):
+            await aclose_sockets(client_socket)
             return None
     except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
             trio.BusyResourceError, gaierror, OSError):
+        await aclose_sockets(client_socket)
         return None
+    if (port == 7000 and fnmatch(ss_hostname, '*.dal.net') == True):
+        server_socket = await make_normal_socket(client_socket, ss_hostname, port)
+    elif fnmatch(ss_hostname, '*.undernet.org') == True:
+        server_socket = await make_normal_socket(client_socket, ss_hostname, port)
+    elif port in (6697, 9999, 443, 6699, 6999, 7070, 7000):
+        server_socket = await make_SSL_socket(client_socket, ss_hostname, port)
+    else:
+        server_socket = await make_normal_socket(client_socket, ss_hostname, port)
     try:
-        if port in (6697, 9999, 443, 6699, 6999, 7070) \
-                or (port == 7000 and (fnmatch(ss_hostname, '*.dal.net') == False) \
-                and (False == fnmatch(ss_hostname, '*.undernet.org'))):
-            ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
-            ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-            try:
-                server_socket: trio.SocketStream | trio.SSLStream = await trio.open_ssl_over_tcp_stream(
-                    ss_hostname,
-                    port,
-                    https_compatible=False,
-                    ssl_context=ssl_context,
-                    happy_eyeballs_delay=0.180)
-            except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-                    trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
-                    ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
-                    ConnectionError, BaseException):
-                try:
-                    with trio.fail_after(17.8):
-                        await socket_data.raw_send(client_socket, None,
-                                                   b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
-                        await aclose_sockets(client_socket)
-                except (trio.TooSlowError, trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-                        trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
-                        ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
-                        ConnectionError, BaseException):
-                    await aclose_sockets(client_socket)
-                    return None
-
-        else:
-            try:
-                server_socket: trio.SocketStream | trio.SSLStream = \
-                    await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.180)
-            except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-                    trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
-                    ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
-                    ConnectionError, BaseException):
-                try:
-                    await socket_data.raw_send(client_socket, None,
-                                               b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
-                    await aclose_sockets(client_socket)
-                except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-                        trio.BusyResourceError, gaierror, OSError, trio.NoHandshakeError,
-                        ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
-                        ConnectionError, BaseException):
-                    return None
-        await trio.sleep(0.280)
+        if server_socket == None:
+            return
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ':' + str(port)
         async with trio.open_nursery() as nursery:
@@ -343,14 +309,65 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             # Write to server
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
     except (EndSession, OSError, MemoryError, OverflowError, RuntimeError, WindowsError,
-            BlockingIOError, BaseException, BaseExceptionGroup):
-        await aclose_both(client_socket)
+                BlockingIOError, BaseException, BaseExceptionGroup, trio.EndOfChannel, trio.BrokenResourceError) as e:
         return
+    except KeyboardInterrupt:
+        raise
     finally:
-        # proxy_make_irc_connection()
         print('-')
         print("connections were closed. nursery finished.")
 
+async def make_normal_socket(client_socket, ss_hostname: str, port: int) -> trio.SocketStream | trio.SSLStream:
+    """Setup normal socket
+    """
+    try:
+        server_socket: trio.SocketStream | trio.SSLStream = \
+            await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.18)
+    except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+            trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+            ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+            ConnectionError, BaseException):
+        try:
+            await socket_data.raw_send(client_socket, None,
+                                       b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
+            await aclose_sockets(client_socket)
+            return None
+        except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+                trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+                ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+                ConnectionError, BaseException):
+            await aclose_sockets(client_socket)
+            return None
+    return server_socket
+
+async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
+    server_socket: trio.SSLStream | trio.SocketStream
+    ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    try:
+        server_socket: trio.SocketStream | trio.SSLStream = await trio.open_ssl_over_tcp_stream(
+            ss_hostname,
+            port,
+            https_compatible=False,
+            ssl_context=ssl_context,
+            happy_eyeballs_delay=0.18)
+    except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+            trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+            ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+            ConnectionError, BaseException):
+        try:
+            with trio.fail_after(17.8):
+                await socket_data.raw_send(client_socket, None,
+                                           b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
+                await aclose_sockets(client_socket)
+        except (trio.TooSlowError, trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
+                trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+                ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
+                ConnectionError, BaseException, BaseExceptionGroup):
+            await aclose_sockets(client_socket)
+            return None
+    return server_socket
 
 def exc_print(msg) -> str:
     """Removes excess brackets from exception message
@@ -383,7 +400,7 @@ async def write_loop(client_socket: trio.SocketStream |
                 popline = send_buffer.popleft().strip()
                 line_count += 1
                 if isinstance(popline, str):
-                    line = popline.encode('latin1', errors="replace")
+                    line = popline.encode('utf8', errors="replace")
                 else:
                     line = popline
             except IndexError:
@@ -398,8 +415,10 @@ async def write_loop(client_socket: trio.SocketStream |
         with trio.fail_after(28):
             try:
                 if which_sock == 'cs':
+                    await ss_command(line)
                     await client_socket.send_all(line)
                 else:
+                    await cs_command(line)
                     await server_socket.send_all(line)
                 line = b''
                 if line_count == 10:
@@ -410,6 +429,10 @@ async def write_loop(client_socket: trio.SocketStream |
                     ExceptionGroup, BaseException, BaseExceptionGroup, EndSession, trio.BrokenResourceError):
                 raise EndSession('Write Error. ' + which_sock)
 
+async def cs_command(line):
+    return
+async def ss_command(line):
+    return
 
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        server_socket: trio.SocketStream | trio.SSLStream,
@@ -435,8 +458,8 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     upper_nick_src: str
     upper_nick_full_src: str
     original_line: str = single_line
-    orig_upper_split: list[str] = single_line.split(' ')
-    split_line: list[str] = single_line.lower().split()
+    orig_upper_split: list[str] = colourstrip(single_line).split(' ')
+    split_line: list[str] = colourstrip(single_line).lower().split()
     nick_src: str = single_line.split(' ')[0].split('!')[0].lower()
     src_nick_full: str = single_line.split(' ')[0].lower()
     upper_nick_src: str
@@ -444,73 +467,65 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     old_nick: str
     source_upper: str
     source: str
+    my_usernick = socket_data.mynick[client_socket]
     if original_line[0] == '@':
         single_line = ' '.join(single_line.split(' ')[1:])
         orig_upper_split = original_line.split(' ')[1:]
         split_line = split_line[1:]
     if '!' in split_line[0] or '.' in split_line[0]:
-        upper_nick_src: str = colourstrip(orig_upper_split[0].split('!')[0].lstrip(':'))
-        upper_nick_full_src: str = colourstrip(orig_upper_split[0].lstrip(':'))
+        upper_nick_src: str = orig_upper_split[0].split('!')[0].lstrip(':')
+        upper_nick_full_src: str = orig_upper_split[0].lstrip(':')
         src_nick_full = upper_nick_full_src.lower()
         nick_src = upper_nick_src.lower()
-    if split_line[1] == "nick":
-        upper_nick_dest = colourstrip(orig_upper_split[2].lstrip(':'))
-        upper_nick_src = colourstrip(orig_upper_split[0].split('!')[0].lstrip(':'))
-        nick_src = upper_nick_dest.lower()
-        old_nick = upper_nick_src.lower()
-        upper_nick_src = upper_nick_dest
-        src_nick_full = colourstrip(nick_src + "!" + split_line[0].split("!")[1])
-        upper_nick_full_src = colourstrip(upper_nick_src + '!' + orig_upper_split[0].lower().split('!')[1])
+
+        single_line = ' '.join(single_line.split(' ')[1:])
+        orig_upper_split = original_line.split(' ')[1:]
+        split_line = split_line[1:]
+
+    if split_line[0] == "nick":
+        upper_nick_dest = orig_upper_split[1]
+        old_nick = nick_src
+        upper_nick_full_src = upper_nick_dest + "!" + upper_nick_full_src.split("!")[1].lower()
         if old_nick == socket_data.mynick[client_socket]:
             socket_data.mynick[client_socket] = nick_src
             socket_data.state[client_socket]['upper_nick'] = upper_nick_dest
             socket_data.set_face_nicknet(client_socket)
-        ial.IALData.ial_add_newnick(client_socket, old_nick, nick_src, src_nick_full)
+        ial.IALData.ial_add_newnick(client_socket, old_nick, upper_nick_dest.lower(), upper_nick_full_src.lower())
         return None
     if len(split_line) < 2:
         return None
-    if chan:
-        chan = chan.lstrip(':')
-    if single_line[0] == ':':
-        source_upper = single_line.split(' ')[0]
-        source = source_upper.lower()
-        single_line = ' '.join(single_line.split(' ')[1:])
-        orig_upper_split = original_line.split(' ')[1:]
+    if split_line[1][0] is in ('#','&'):
+        chan = split_line[1]
     if split_line[0] == 'mode':
         return None
-    if split_line[0] == "part":
-        chan = split_line[1].lstrip(':')
-        chan = chan.lower()
+    if split_line[0] == "part":s
         if nick_src == socket_data.mynick[client_socket]:
             socket_data.mychans[client_socket].discard(chan)
             ial.IALData.ial_remove_chan(client_socket, chan)
         else:
-            ial.IALData.ial_remove_nick(client_socket, nick_src, chan)
-            ial.IALData.myial_count[client_socket][chan] -= 1
+            if ial.IALData.ial_remove_nick(client_socket, nick_src, chan) == True:
+                ial.IALData.myial_count[client_socket][chan] -= 1
     if split_line[0] == "join":
-        chan = orig_upper_split[1].lower()
-        chan = chan.lstrip(':')
-        my_usernick = socket_data.mynick[client_socket]
-        if nick_src != my_usernick:
-            if client_socket not in ial.IALData.myial_count:
-                ial.IALData.myial_count[client_socket] = {}
-            if chan not in ial.IALData.myial_count[client_socket]:
-                ial.IALData.myial_count[client_socket][chan] = 1
-            ial.IALData.myial_count[client_socket][chan] += 1
+        chan = split_line[1]
+        if client_socket not in ial.IALData.myial_count:
+            ial.IALData.myial_count[client_socket] = {}
+        if chan not in ial.IALData.myial_count[client_socket]:
+            ial.IALData.myial_count[client_socket][chan] = 0
+        ial.IALData.myial_count[client_socket][chan] += 1
         ial.IALData.ial_add_nick(client_socket, nick_src, src_nick_full, chan)
         if nick_src == my_usernick:
             socket_data.mychans[client_socket].add(chan)
             if client_socket not in ial.IALData.who:
                 ial.IALData.who[client_socket] = {}
-            ial.IALData.who[client_socket][chan] = '0'
+            ial.IALData.who[client_socket][chan] = 0
             if client_socket not in ial.IALData.myial_count:
                 ial.IALData.myial_count[client_socket] = {}
             ial.IALData.myial_count[client_socket][chan] = 0
     if split_line[0] == "352":
         # /who list
-        nick = colourstrip(split_line[7].lower())
-        addr = colourstrip(split_line[5].lower())
-        identd = colourstrip(split_line[4].lower())
+        nick = split_line[7].lower()
+        addr = split_line[5].lower()
+        identd = split_line[4].lower()
         fulladdr = nick + "!" + identd + "@" + addr
         chan = split_line[2].lower()
         if chan[0] != "#":
@@ -536,13 +551,13 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
             return None
         nicks: list[str]
         nicks = [split_line[4].lstrip(':')]
-
         if len(split_line) > 5:
             nicks += split_line[5:]
         chan = split_line[3]
         ial.IALData.myial_count[client_socket][chan] += len(nicks)
     if split_line[0] == "366":
         # End of /names
+        print('END OF NAMES, RUNNING TIMER?')
         chan = split_line[2]
         if ial.IALData.ial_count_nicks(client_socket, chan) == \
                 ial.IALData.myial_count[client_socket][chan]:
@@ -568,10 +583,10 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
 
     if split_line[0] == "privmsg":
         chan = split_line[1]
-        if chan[0] != '#':
+        if chan[0] not in ('#','&'):
             chan = ''
-        # if nick in socket_data.myial[client_socket]:
-        # return_silent = ial.IALData.ial_add_nick(client_socket, nick, nick_src)
+        if nick_src in socket_data.myial[client_socket]:
+            return_silent = ial.IALData.ial_add_nick(client_socket, nick_src, nick_src_full, chan)
     if return_silent is True:
         return False
     return None
@@ -647,16 +662,19 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
     read_count: int = 0
     while True:
         try:
-            read_sock = await dest_socket.receive_some(65536)
+            read_sock = await dest_socket.receive_some(655)
         except trio.BusyResourceError:
             await trio.sleep(0.100)
             continue
+        except trio.Cancelled:
+            await trio.sleep(0)
+            continue
         except (BaseException, BaseExceptionGroup, ExceptionGroup, trio.BrokenResourceError, trio.ClosedResourceError,
-                trio.CancelledResourceError, trio.IncompleteReadError):
-            # raise EndSession("proxy-server's connection to irc server closed.")
-            raise
+                trio.EndOfChannel, AttributeError) as e:
+            #print('IRC_server-Closed-Connection: ', e,e.args)
+            raise EndSession(e.args)
         if not read_sock:
-            raise EndSession('irc-server closed connection to proxy.')
+            raise EndSession('irc-server-closed-connection-to-proxy.')
         read_line += read_sock
         read_sock = b''
         while True:
@@ -688,9 +706,9 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             read_sock = b''
             find_n = -1
             if read_line:
-                await trio.sleep(0.115)
+                await trio.sleep(0)
             else:
-                await trio.sleep(0.244)
+                await trio.sleep(0.160)
     return None
 
 
@@ -706,7 +724,6 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         @return: None
 
     """
-
     # from above ss_received_chunk()
     dest_socket: trio.SocketStream | trio.SSLStream = client_socket
     nick_src: str = ''
@@ -716,13 +733,13 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     if len(split_line) == 0:
         actions.sc_send(dest_socket, '\r\n')
         return
-    if (single_line.startswith('cap')):
-        actions.sc_send(dest_socket, original_line)
-        return
     if check_mirc_exploit(original_line) is True:
         await exploit_triggered(client_socket, server_socket)
         await trio.sleep(0)
         return None
+    if (single_line.startswith('cap')):
+        actions.sc_send(dest_socket, original_line)
+        return
     if original_line[0] == '@':
         if not single_line.startswith('@time') and not single_line.startswith('@account') and not \
                 single_line.startswith('@batch') and not single_line.startswith('@msgid'):
@@ -735,7 +752,7 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     else:
         orig_upper_split = original_line.split(' ')
 
-    ial_send = await ss_updateial(client_socket, server_socket, single_line, # single_line is lowercase
+    ial_send = await ss_updateial(client_socket, server_socket, single_line,
                                   orig_upper_split)
     if ial_send is False:
         await trio.sleep(0)
@@ -789,10 +806,11 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         socket_data.set_face_nicknet(client_socket)
     elif split_line[0] == '301':
         reason = " ".join(orig_upper_split[4:]).strip(':\r\n\t ')
-        msg = f":www.myircproxyip.com NOTICE {socket_data.mynick[client_socket]}" \
+        msg = f":{WWW_SHORT_URL} NOTICE {socket_data.mynick[client_socket]}" \
               f" :User {orig_upper_split[3]} is" \
               f" set away, reason: {reason}"
         actions.sc_send(client_socket, msg)
+
     actions.sc_send(client_socket, original_line)
     await trio.sleep(0)
     return None
@@ -811,9 +829,7 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
 
     """
     dest_socket = server_socket
-    # if single_line == '':
-    #     actions.sc_send(server_socket, '\n')
-    #     return
+
     original_line = single_line
     single_line = single_line.lower()
     split_line_low: list[str] = single_line.split(' ')
@@ -823,8 +839,6 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
     if split_line_low[0] == 'ping' or split_line_low[0] == 'pong':
         pass
     if split_line_low[0] == 'names':
-        chan = split_line_low[1].lstrip(':')
-        ial.IALData.myial_count[client_socket][chan] = 0
         actions.sc_send(dest_socket, original_line)
         await trio.sleep(0)
         return
@@ -835,9 +849,9 @@ async def cs_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         await trio.sleep(0)
         return None
     halt_on_yes: bool | None = False
-    if split_line_low[1].startswith('.trio') or split_line_low[1].startswith('.proxy') or \
-            split_line_low[1].startswith('.xdcc') or split_line_low[1].startswith('.py'):
-        halt_on_yes = cs_rcvd_command(client_socket, server_socket, original_line, split_line_low)
+    # if split_line_low[1].startswith('.trio') or split_line_low[1].startswith('.proxy') or \
+    #         split_line_low[1].startswith('.xdcc') or split_line_low[1].startswith('.py'):
+    #     halt_on_yes = cs_rcvd_command(client_socket, server_socket, original_line, split_line_low)
     if not halt_on_yes:
         actions.sc_send(dest_socket, original_line)
     await trio.sleep(0)
@@ -903,7 +917,7 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
 
     """
     prefix = ':www.myircproxyip.com 375 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + www_url + '  Message of the Day -')
+    actions.sc_send(client_socket, prefix + WWW_SHORT_URL + '  Message of the Day -')
     prefix = ':www.myircproxyip.com 372 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + '\x02www.myircproxyip.com MOTD\x02 -')
     actions.sc_send(client_socket, prefix)
@@ -947,8 +961,7 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
     """
 
     del split_line[0]
-
-    if len(split_line) >= 2 and split_line[0] == '.colour':
+    if len(split_line) >= 2 and split_line[2] == ':.colour':
         actions.sc_send(client_socket,
                         ':ashburry!mg-script@www.myircproxyip.com privmsg ashburry :colour is: ' + str(
                             ord(split_line[1][0]))
@@ -1238,9 +1251,11 @@ async def start_proxy_listener():
                 + 'maybe trio-ircproxy.py is already running somewhere?')
 
             await quit_all()
+            # raise
             # print("EXC: " + str(exc.args))
         else:
-            raise
+            # raise
+            pass
     print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
     try:
         sys.exit(13)

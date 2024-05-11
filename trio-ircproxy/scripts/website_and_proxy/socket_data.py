@@ -87,7 +87,7 @@ class SocketData:
         Create socket data and store all the necessary information in one location.
         Vars:
             :client_socket: The client socket.
-            :server_socket: The server socket.
+        :server_socket: The server socket.
         """
         cls.which_socket[client_socket] = 'cs'
         cls.which_socket[server_socket] = 'ss'

@@ -32,16 +32,17 @@ class IALData:
 
     @classmethod
     def sendwho(cls, server_socket: trio.SocketStream | trio.SSLStream, th: Timer, chan: str):
+        print('WHO SENT: ',chan)
         sc_send(server_socket, 'who ' + chan)
         cls.timers.remove(th)
 
     @classmethod
     def comchans_get_set(cls, client_socket: trio.SocketStream | trio.SSLStream, nick: str) -> frozenset:
         """Return the common channels with nick.
-
-        :param client_socket: trio.SocketStream | trio.SSLStream() irc client socket stream
-        :param nick: nick or nickmask to common channels with
-        :return: returns a set of strings of common channel names
+        Vars:
+            :client_socket: trio.SocketStream | trio.SSLStream() irc client socket stream
+            :nick: nick or nickmask to common channels with
+            :return: returns a set of strings of common channel names
         """
         cls.make_ial(client_socket)
         if not nick:
@@ -56,11 +57,10 @@ class IALData:
     @classmethod
     def comchans_get_list(cls, client_socket: trio.SocketStream | trio.SSLStream, nick: str) -> List[str]:
         """Return the common channels with nick.
-
-        :rtype: list
-        :param client_socket: trio.SocketStream | trio.SSLStream() irc client socket stream
-        :param nick: nick to common channels with
-        :return: returns a list of strings of common channel names
+        Vars
+            :client_socket: trio.SocketStream | trio.SSLStream() irc client socket stream
+            :nick: nick to common channels with
+            :return: returns a list of strings of common channel names
 
         """
         cls.make_ial(client_socket)
@@ -71,10 +71,9 @@ class IALData:
         """Retrieve an nickmask from the global IAL
 
         Vars:
-            :rtype: frozenset
-            :param client_socket: the client socket
-            :param mask: '*!*@*addr.net'
-            :returns: an frozenset() of matches
+            :client_socket: the client socket
+            :mask: '*!*@*addr.net'
+            :return: a frozenset() of matches
         """
         found_ial = set()
         for nick in cls.myial[client_socket]:
@@ -109,10 +108,10 @@ class IALData:
     def ial_add_newnick(cls, client_socket: trio.SocketStream | trio.SSLStream, oldnick: str, newnick: str, nickmask: str) -> None:
         """Replaces oldnick with newnick
         vars:
-            :param client_socket: client socket
-            :param oldnick: the old nickname
-            :param newnick: the new nickname
-            :param nickmask: the new nickmask that may change
+            :client_socket: client socket
+            :oldnick: the old nickname
+            :newnick: the new nickname
+            :nickmask: the new nickmask that may change
         """
         cls.make_ial(client_socket)
         cls.myial[client_socket][newnick] = nickmask
@@ -126,37 +125,48 @@ class IALData:
         cls.ial_remove_nick(client_socket, oldnick, None)
 
     @classmethod
-    def ial_remove_nick(cls, client_socket, old_nick, chans: Union[set, str, None]) -> None:
+    def ial_remove_nick(cls, client_socket, old_nick, chans: list[set, str | None]) -> None:
         """Removes nick from ial
-
         Vars:
-            :rtype: None
-            @param old_nick: nick to remove
-            @param client_socket: client socket
-            @param chans: set, str or None
+            :old_nick: nick to remove
+            :client_socket: client socket
+            :chans: set, str or None
         """
         cls.make_ial(client_socket)
         try:
+            returns = False
             if chans is not None:
-                if isinstance(chans, set):
+                if isinstance(chans, set) or isinstance(chans, list) or isinstance(chans, tuple):
                     for chan in chans:
+                        if chan in cls.myial_chan[client_socket][old_nick]:
+                            returns = True
                         cls.myial_chan[client_socket][old_nick].discard(chan)
 
                 elif chans:
+                    if chans in cls.myial_chan[client_socket][old_nick]:
+                        returns = True
                     cls.myial_chan[client_socket][old_nick].discard(chans)
             if not chans or not cls.myial_chan[client_socket][old_nick]:
-                del cls.myial_chan[client_socket][old_nick]
-                del cls.myial[client_socket][old_nick]
+                try:
+                    del cls.myial_chan[client_socket][old_nick]
+                    returns = True
+                except KeyError:
+                    pass
+                try:
+                    del cls.myial[client_socket][old_nick]
+                    returns = True
+                except KeyError:
+                    pass
         except KeyError:
             pass
-
+        return returns
     @classmethod
     def ial_remove_chan(cls, client_socket, chan) -> None:
         """Remove a chan from the ial.
 
         vars:
-            client_socket: client socket
-            chan: chan to remove
+            :client_socket: client socket
+            :chan: chan to remove
         """
         cls.make_ial(client_socket)
         print(f'timers: {cls.timers}')
@@ -179,12 +189,11 @@ class IALData:
     def ial_add_nick(cls, client_socket, nick, nickmask, chan) -> bool:
         """Add a nickname to the ial. for now chan maybe None, this will change sometime.
         vars:
-            :param client_socket: client socket
-            :param nick: nickname to add
-            :param nickmask: the full address of the nickname
-            :param chan: add an common channel to the ial
+            :client_socket: client socket
+            :nick: nickname to add
+            :nickmask: the full address of the nickname
+            :chan: add an common channel to the ial
             :returns: None
-            @rtype: None
         """
         cls.make_ial(client_socket)
         cls.myial[client_socket][nick] = nickmask
@@ -199,8 +208,7 @@ class IALData:
     def make_ial(cls, client_socket) -> None:
         """Make the client_socket ial dict
             Vars:
-                :rtype: None
-                :param client_socket: the client socket
+                :client_socket: the client socket
                 :returns: None
         """
         if client_socket not in cls.myial:
@@ -209,3 +217,21 @@ class IALData:
             cls.myial_chan[client_socket] = {}
         if client_socket not in cls.who:
             cls.who[client_socket] = dict()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
