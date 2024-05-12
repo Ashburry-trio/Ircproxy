@@ -10,6 +10,8 @@ from collections import deque
 from typing import Dict, Deque, Set, Union
 from system_data import SystemData as system_data
 from socket import gaierror
+import translate
+
 
 # Duplicated in ..trio_ircproxy.actions.yes_no()
 def yes_no(msg: str = ''):
@@ -60,6 +62,11 @@ async def send_quit(sc_socket):
         return
     await send_quit_quit(server_socket, client_socket)
 
+def do_translate(cs, msg: str) -> str:
+    if SocketData.mylang[cs] == 'en':
+        return msg
+    tr = translate.Translator(from_lang='en', to_lang=SocketData.mylang[cs])
+    return tr.translate(msg)
 
 class SocketData:
     current_count: Dict[trio.SocketStream | trio.SSLStream, int]
@@ -68,6 +75,7 @@ class SocketData:
     myial: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
     myial_chan: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
     mychans: Dict[trio.SocketStream | trio.SSLStream, Set[str]] = {}
+    mylang: Dict[trio.SocketStream | trio.SSLStream, str] = {}
     mysockets: Dict[trio.SocketStream | trio.SSLStream, trio.SocketStream | trio.SSLStream] = {}
     raw_005: Dict[trio.SocketStream | trio.SSLStream , Dict[str, str | int]] = {}
     dcc_send: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
@@ -94,6 +102,8 @@ class SocketData:
         cls.login[client_socket] = ''
         cls.conn_timeout[client_socket] = None
         cls.conn_timeout[server_socket] = None
+        cls.mylang[client_socket] = 'en'
+        cls.translate[client_socket] = do_translate
         cls.mysockets[client_socket] = server_socket
         cls.mysockets[server_socket] = client_socket
         cls.dcc_chat[client_socket] = {}

@@ -406,19 +406,20 @@ async def write_loop(client_socket: trio.SocketStream |
             except IndexError:
                 line = b''
                 if line_count == 0:
-                    line_count = 0
-                    await trio.sleep(1.000)
+                    await trio.sleep(0.100)
                 line_count = 0
-                await trio.sleep(0.180)
+                await trio.sleep(0)
                 continue
             line += b"\r\n"
         with trio.fail_after(28):
             try:
                 if which_sock == 'cs':
-                    await ss_command(line)
+                    if await script_command(client_socket, 'cs', line.strip()) is True:
+                        continue
                     await client_socket.send_all(line)
                 else:
-                    await cs_command(line)
+                    if await script_command(client_socket, 'ss', line.strip()) is True:
+                        continue
                     await server_socket.send_all(line)
                 line = b''
                 if line_count == 10:
@@ -429,11 +430,205 @@ async def write_loop(client_socket: trio.SocketStream |
                     ExceptionGroup, BaseException, BaseExceptionGroup, EndSession, trio.BrokenResourceError):
                 raise EndSession('Write Error. ' + which_sock)
 
-async def cs_command(line):
-    return
-async def ss_command(line):
-    return
 
+async def script_command(client_socket, server, line):
+    if line[0][0] == '@':
+        line = line[1:]
+    source = ''
+    if line[0][0] == ':':
+        source = line[0][1:]
+        if len(line) >= 3:
+            target = line[2]
+        else:
+            target = ''
+        del line[0]
+    if server == 'cs':
+        source = socket_data.mynick[client_socket]
+        if len(line) >= 2:
+            target = line[1]
+        else:
+            target = ''
+    low_line = line.lower()
+    low_line = low_line.split(' ')
+    if low_line[1] == 'quit':
+        if await UserCommands.user_QUIT(client_socket, server, source) is True:
+            return True
+    if low_line[1] == 'nick':
+        if await UserCommands.user_NICK_change(client_socket, server, source, target) is True:
+            return True
+    if low_line[1] == 'part':
+        if await UserCommands.user_PART(client_socket, server, source, target) is True:
+            return True
+
+    if source and len(low_line) >= 4 and len(low_line[3]) >= 3 and low_line[1] == 'privmsg' and low_line[3][1] == '.':
+        source_nick = source.split('!')[0]
+        target = target
+        cmd = low_line[3][1:]
+        if len(low_line) >= 5:
+            parms = ' '.join(low_line[4:])
+        else:
+            parms = ''
+        await UserCommands.execute_user_command(client_socket, server, source_nick, target, cmd, parms)
+        return True
+    else:
+        source_nick = ''
+        cmd = ''
+        parms = ''
+        target = ''
+
+import translate
+from socket_data import do_translate
+
+def isme(client_socket, server, nick, target='') -> bool:
+    """Check if server is cs or nick is mynick or nick is
+        *Status and return True or False
+    Vars:
+        :client_socket: client socket
+        :server: cs or ss
+        :nick: nick to check
+        :target: target nick to check
+        :returns: bool
+    """
+    if server == 'cs':
+        return True
+    nick = nick.lower()
+    if '!' in nick:
+        nick = nick.split('!')[0]
+    target = target.lower()
+    if '!' in target:
+        target = target.split('!')[0]
+    if nick == socket_data.mynick[client_socket].lower() or target == '*status':
+        return True
+    else:
+        return False
+catch_all = {}
+class UserCommands(object):
+    async def user_PART(cls, client_socket, server, source, chan) -> bool:
+        source_full = source
+        if '!' in source:
+            source = source.split('!')[0]
+        source = source.lower()
+        return False
+    async def user_QUIT(cls, client_socket, source) -> bool:
+        source_full = source
+        if '!' in source:
+            source = source.split('!')[0]
+        source = source.lower()
+        if '.lang'+source in catch_all:
+            del catch_all['.lang'+source]
+        return False
+    async def user_NICK_change(cls, client_socket, source, target) -> bool:
+        source_full = source
+        if '!' in source:
+            source = source.split('!')[0]
+        source = source.lower()
+        if '.lang' + source in catch_all:
+            catch_all['.lang'+target] = catch_all['.lang' + source]
+            del catch_all['.lang' + source]
+        return False
+
+    async def user_CMD_set_lang(cls, client_socket, server, source, target, cmd, parms) -> bool:
+        source_full = source
+        if '!' in source:
+            source = source.split('!')[0]
+        source = source.lower()
+        if '.lang'+source in catch_all:
+            del catch_all['.lang'+source]
+            if socket_data.mylang[client_socket].split(' ')[1][:2] == 'en':
+                tr = cmd
+            else:
+                tr = translate.Translator(from_lang=socket_data.mylang[client_socket].split(' ')[1], to_lang='en')
+                tr = tr.translate(cmd)
+            if tr.lower() == 'yes':
+                socket_data.mylang[client_socket] = socket_data.mylang[client_socket].split(' ')[1]
+                mylang = socket_data.mylang[client_socket]
+                if isme(client_socket, server, source, target) is True:
+                    await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG ' +
+                            socket_data.mynick[client_socket] + ' :' +
+                                                 do_translate(client_socket, 'Language set to: '+ mylang))
+                else:
+                    await socket_data.mysockets[client_socket].send_all('PRIVMSG ' + source + ' :'+
+                                            do_translate(client_socket, 'Language set to: ' + mylang))
+            else:
+                if isme(client_socket, server, source, target) is True:
+                    await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG ' +
+                            socket_data.mynick[client_socket] + ' :Language not set')
+                else:
+                    await socket_data.mysockets[client_socket].send_all('PRIVMSG ' + source + ' :Language not set')
+                socket_data.mylang[client_socket] = 'en'
+            return True
+        if len(parms) == 0:
+            code_web = 'Default languages codes: https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes'
+            if isme(client_socket, server, source, target) == True:
+                await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG '
+                                             + socket_data.mynick[client_socket] + ' :'+code_web)
+                await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG '
+                                             +socket_data.mynick[client_socket]+' :Usage: '+cmd+' <lang_code>')
+            else:
+                await socket_data.mysockets[client_socket].send_all('PRIVMSG ' + source + ' :' + code_web)
+                await socket_data.mysockets[client_socket].send_all('PRIVMSG '+source+' :Usage: '+cmd+' <lang_code>')
+            return True
+        if parms[:2] != 'en':
+            tr = translate.Translator(from_lang='en', to_lang=parms)
+            question = tr.translate('Do you understand this language? Respond with the word YES.')
+        else:
+            question = 'Do you understand this language? Respond with the word YES.'
+        if 'using 2 letter iso or' in question.lower():
+            if isme(client_socket, server, source, target) == True:
+                error_msg = '*Status!mg-script@www.myproxyip.com PRIVMSG ' + socket_data.mynick[client_socket] \
+                    + ' :ERROR: Unsupported language code'
+                error_msg = error_msg.encode('utf8', errors='replace')
+                await client_socket.send_all(error_msg)
+            else:
+                error_msg = 'PRIVMSG ' + source + ' :ERROR: Unsupported language code'
+                error_msg = error_msg.encode('utf8', errors='replace')
+                await socket_data.mysockets[client_socket].send_all(error_msg)
+            return True
+        else:
+            socket_data.mylang[client_socket] = 'NOT '+parms.upper()
+        if len(parms[0]) >= 2 and parms[:2] == 'en':
+            if isme(client_socket, server, source, target) == True:
+                question = '*Status!mg-script@www.myproxyip.com PRIVMSG ' + socket_data.mynick[
+                    client_socket] + ' :Do you understand this language? Respond with the word YES.'
+                question = question.encode('utf8', errors='replace')
+                await client_socket.send_all(question)
+            else:
+                question = 'PRIVMSG ' + source + ' :Do you understand this language? Respond with the word YES.'
+                question = question.encode('utf8', errors='replace')
+                await socket_data.mysockets[client_socket].send_all(question)
+        else:
+            if isme(client_socket, server, source, target) is True:
+                question = '*Status!mg-script@www.myproxyip.com PRIVMSG ' + socket_data.mynick[
+                    client_socket] + ' :'+ question
+                question = question.encode('utf8', errors='replace')
+                await client_socket.send_all(question)
+            else:
+                question = 'PRIVMSG ' + source + ' :'+ question
+                question = question.encode('utf8', errors='replace')
+                await socket_data.mysockets[client_socket].send_all(question)
+            return True
+        catch_all['.lang'+source] = clsuser_CMD_set_lang
+
+    User_CMD: dict[str, Callable] = {}
+    User_CMD['.lang'] = user_CMD_set_lang
+    async def execute_user_command(cls, client_socket: trio.SocketStream | trio.SSLStream, server,
+                                   source_nick, target_nick, cmd, parms) -> bool:
+        """Execute a user command if it exists."""
+        if '!' in source_nick:
+            source = source_nick
+            source_nick = source_nick.split('!')[0]
+            target = target_nick
+        target_nick = target_nick.lower()
+        source_nick = source_nick.lower()
+        if server == 'cs':
+            source_nick = socket_data.mynick[client_socket].lower()
+        try:
+            if '.lang'+source_nick in catch_all:
+                catch_all['.lang'+source_nick](client_socket, server, source_nick, target_nick, cmd, parms)
+                return True
+            await UserCommands.User_CMD[cmd](client_socket, server, source_nick, target_nick, cmd, parms)
+        except (BaseException, BaseExceptionGroup):
+            pass
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        server_socket: trio.SocketStream | trio.SSLStream,
                        single_line: str, split_line: list[str]) -> \
@@ -472,135 +667,25 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
         single_line = ' '.join(single_line.split(' ')[1:])
         orig_upper_split = original_line.split(' ')[1:]
         split_line = split_line[1:]
-    if '!' in split_line[0] or '.' in split_line[0]:
+    if '!' in split_line[0] or '.' in split_line[0] and split_line[0][0] == ':':
         upper_nick_src: str = orig_upper_split[0].split('!')[0].lstrip(':')
-        upper_nick_full_src: str = orig_upper_split[0].lstrip(':')
-        src_nick_full = upper_nick_full_src.lower()
-        nick_src = upper_nick_src.lower()
-
-        single_line = ' '.join(single_line.split(' ')[1:])
-        orig_upper_split = original_line.split(' ')[1:]
-        split_line = split_line[1:]
-
-    if split_line[0] == "nick":
-        upper_nick_dest = orig_upper_split[1]
-        old_nick = nick_src
-        upper_nick_full_src = upper_nick_dest + "!" + upper_nick_full_src.split("!")[1].lower()
-        if old_nick == socket_data.mynick[client_socket]:
-            socket_data.mynick[client_socket] = nick_src
-            socket_data.state[client_socket]['upper_nick'] = upper_nick_dest
-            socket_data.set_face_nicknet(client_socket)
-        ial.IALData.ial_add_newnick(client_socket, old_nick, upper_nick_dest.lower(), upper_nick_full_src.lower())
-        return None
-    if len(split_line) < 2:
-        return None
-    if split_line[1][0] is in ('#','&'):
-        chan = split_line[1]
-    if split_line[0] == 'mode':
-        return None
-    if split_line[0] == "part":s
-        if nick_src == socket_data.mynick[client_socket]:
-            socket_data.mychans[client_socket].discard(chan)
-            ial.IALData.ial_remove_chan(client_socket, chan)
-        else:
-            if ial.IALData.ial_remove_nick(client_socket, nick_src, chan) == True:
-                ial.IALData.myial_count[client_socket][chan] -= 1
-    if split_line[0] == "join":
-        chan = split_line[1]
-        if client_socket not in ial.IALData.myial_count:
-            ial.IALData.myial_count[client_socket] = {}
-        if chan not in ial.IALData.myial_count[client_socket]:
-            ial.IALData.myial_count[client_socket][chan] = 0
-        ial.IALData.myial_count[client_socket][chan] += 1
-        ial.IALData.ial_add_nick(client_socket, nick_src, src_nick_full, chan)
-        if nick_src == my_usernick:
-            socket_data.mychans[client_socket].add(chan)
-            if client_socket not in ial.IALData.who:
-                ial.IALData.who[client_socket] = {}
-            ial.IALData.who[client_socket][chan] = 0
-            if client_socket not in ial.IALData.myial_count:
-                ial.IALData.myial_count[client_socket] = {}
-            ial.IALData.myial_count[client_socket][chan] = 0
-    if split_line[0] == "352":
-        # /who list
-        nick = split_line[7].lower()
-        addr = split_line[5].lower()
-        identd = split_line[4].lower()
-        fulladdr = nick + "!" + identd + "@" + addr
-        chan = split_line[2].lower()
-        if chan[0] != "#":
-            return None
-        if chan not in socket_data.mychans[client_socket]:
-            return None
-        ial.IALData.ial_add_nick(client_socket, nick, fulladdr, chan=chan)
-        if ial.IALData.who[client_socket][chan] == '0':
-            ial.IALData.who[client_socket][chan] = 'inwho'
-        if ial.IALData.who[client_socket][chan] == 'inwho':
-            return False
-        return None
-    if split_line[0] == "315":
-        chan = split_line[2].lower()
-        if chan[0] != '#':
-            return None
-        if ial.IALData.who[client_socket][chan] == 'inwho':
-            ial.IALData.who[client_socket][chan] = '1'
-            return False
-        return None
-    if split_line[0] == "353":
-        if len(split_line) < 5:
-            return None
-        nicks: list[str]
-        nicks = [split_line[4].lstrip(':')]
-        if len(split_line) > 5:
-            nicks += split_line[5:]
-        chan = split_line[3]
-        ial.IALData.myial_count[client_socket][chan] += len(nicks)
-    if split_line[0] == "366":
-        # End of /names
-        print('END OF NAMES, RUNNING TIMER?')
-        chan = split_line[2]
-        if ial.IALData.ial_count_nicks(client_socket, chan) == \
-                ial.IALData.myial_count[client_socket][chan]:
-            return None
-        th = Timer(randint(3, 12), lambda: ial.IALData.sendwho(server_socket, th, chan))
-        ial.IALData.timers.add(th)
-        th.start()
-    if split_line[0] == '336':
-        pass
-    if split_line[0] == '322':
-        pass
-    if split_line[0] == '323':
-        pass
-    if split_line[0] == '321':
-        pass
-    if split_line[0] == 'away':
-        try:
-            awaymsg: str = ' '.join(single_line.split(' ')[1:])
-        except IndexError:
-            awaymsg: str = ''
-        finally:
-            cs_away_msg_notify(client_socket, nick_src, awaymsg)
-
-    if split_line[0] == "privmsg":
-        chan = split_line[1]
-        if chan[0] not in ('#','&'):
-            chan = ''
-        if nick_src in socket_data.myial[client_socket]:
-            return_silent = ial.IALData.ial_add_nick(client_socket, nick_src, nick_src_full, chan)
+        upper_nick_full_src: str = orig_upper_split[0]
+        return_silent = ial.IALData.ial_add_nick(client_socket, nick_src, nick_src_full, chan)
     if return_silent is True:
         return False
     return None
 
 
 def cs_away_msg_notify(client_socket: trio.SocketStream | trio.SSLStream, nick: str, msg: str) -> None:
-    """Notify the client that the user is away when joining the channel or talking in the channel
-
-    :@param client_socket: the socket to the irc-client
-    :@param nick: the string nickname that is set-away
-    :@param msg: the string away-message, if any
-    :@return: None
-
+    """Notify the client that the user is away when joining the
+      channel or talking in the channel
+    Vars:
+        :client_socket: the socket to the irc-client
+        :nick: the string nickname that is set-away
+        :msg: the string away-message, if any
+        :return: None
     """
+
     if not nick:
         return None
     msg = msg.lstrip(': \t\f')
@@ -621,8 +706,8 @@ def lower_strip(text: str) -> str:
 
 def lower_color_and_strip(text: str) -> str:
     """lower text, strip text, mirc colour removal
-    :@param text: text to be stripped, lowered, and removed colour; to be parsed.
-    :@return: returns the string
+    :text: text to be stripped, lowered, and removed colour; to be parsed.
+    :return: returns the string
 
     """
     text = text.lower()

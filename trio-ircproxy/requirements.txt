@@ -2,6 +2,7 @@ git+https://github.com/python-trio/trio.git
 git+https://github.com/python-validators/validators
 git+https://github.com/DiffSK/configobj
 git+https://github.com/encode/httpx
+traitlets
 translate
 pyshark
 chardet
@@ -20,4 +21,3 @@ sortedcontainers>=2.4.0
 typing>=3.7.4.3
 typing_extensions>=4.5.0
 urllib3>=1.26.14
-ConfigObject>=1.2.2

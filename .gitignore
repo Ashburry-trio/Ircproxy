@@ -5,7 +5,7 @@
 *.key
 *.crt
 *\users\*
-*\takeback.py
+*\takeback.*
 *venv*
 #backups
 *.bak
