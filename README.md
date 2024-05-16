@@ -1,7 +1,7 @@
 **Trio-ircproxy.py** 
 =====================
 
-### \- an proxy/bounce server for your IRC client. Copyright (c) 2024, *Master Sire G.I. Kenggi J.P. phd. ret.*
+### \- an proxy/bounce server for your IRC client. Copyright (c) 2024, *master sire g.i. Kenggi J.P. PhD. ret.*
 
 This is a work in progress, if you wish to help then write issues for all and
 any requests. The issues is working as a to-do list of features as well as a
