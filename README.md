@@ -41,8 +41,31 @@ know how to run the app from these Windows only instructions:
 If you are using Linux then you need to install manually; this is done with:
 
 **python3.12 -m venv ~/Ircproxy/trio-ircproxy/venv** then look in **./trio-ircproxy/venv/bin** 
-for the **activate** script compatible with your Linux version. Then use
-google to see how to run it. You will need to *activate* the the venv everytime
+for the **activate** script compatible with your Linux version. 
+Platform
+
+Shell
+======
+Command to activate virtual environment
+
+WINDOWS
+--------
+cmd.exe C:\> .\trio-ircproxy\Scripts\activate.bat
+PowerShell PS C:\> .\trio-ircproxy\Scripts\Activate.ps1
+
+POSIX
+------
+bash/zsh
+$ source ./trio-ircproxy/bin/activate
+fish
+$ source ./trio-ircproxy/bin/activate.fish
+csh/tcsh
+$ source ./trio-ircproxy/bin/activate.csh
+PowerShell 
+$ ./trio-ircproxy/bin/Activate.ps1
+
+
+You will need to *activate* the the venv everytime
 you run the app. After you have activated the venv type **python
 ~/Ircproxy/trio-ircproxy/trio-ircproxy.py** to run the app. Don’t forget to install the
 requirements.txt with **pip3 install -r ~/Ircproxy/trio-ircproxy/requirements.txt**
