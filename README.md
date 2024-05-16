@@ -41,8 +41,7 @@ know how to run the app from these Windows only instructions:
 If you are using Linux then you need to install manually; this is done with:
 
 **python3.12 -m venv ~/Ircproxy/trio-ircproxy/venv** then look in **./trio-ircproxy/venv/bin** 
-for the **activate** script compatible with your Linux version. 
-Platform
+for the **activate** script compatible with your Linux version platform:
 
 Shell
 ======
@@ -64,11 +63,10 @@ $ source ./trio-ircproxy/bin/activate.csh
 PowerShell 
 $ ./trio-ircproxy/bin/Activate.ps1
 
-
 You will need to *activate* the the venv everytime
-you run the app. After you have activated the venv type **python
+you run the trio-ircproxy.py app. After you have activated the venv type **python
 ~/Ircproxy/trio-ircproxy/trio-ircproxy.py** to run the app. Don’t forget to install the
-requirements.txt with **pip3 install -r ~/Ircproxy/trio-ircproxy/requirements.txt**
+requirements.txt with **pip3 install -r ~/Ircproxy/trio-ircproxy/requirements.txt** (just once forever).
 
 Copyright License
 =================
@@ -81,13 +79,14 @@ your code you accept the LICENSE that comes with the PR or other
 **contribution.**
 
 The web-server half of the project is available in another repo found at
-**https://github.com/ashburry-trio/RoseMay** and runs with Flask on
+**https://github.com/ashburry-trio/RoseMay_Website** and runs with Flask on
 **https://www.PythonAnywhere.com** servers. It is being developed in real-time at
 **https://ashburry.pythonanywhere.com** or **https://www.myproxyip.com** page by 
 page and has a long way to go. Once in awhile I update the repo with the web-site 
 code which you can get working with minimal effort, even start your own web-site
 based on RoseMay; if you require a login I would recommened letting me code the login
-logic as it is tricky and difficult and just change the content on every page except the LICENSE which any license suitable for open source will do.
+logic as it is tricky and difficult and just change the content on every page except the
+LICENSE which any license suitable for open source projects will do.
 
 o end of document.
 
