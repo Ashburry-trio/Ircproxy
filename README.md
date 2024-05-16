@@ -49,24 +49,25 @@ Command to activate virtual environment
 
 WINDOWS
 --------
-cmd.exe C:\> .\trio-ircproxy\Scripts\activate.bat
-PowerShell PS C:\> .\trio-ircproxy\Scripts\Activate.ps1
+    -   cmd.exe C:\> .\trio-ircproxy\Scripts\activate.bat
+
+    -   PowerShell PS C:\> .\trio-ircproxy\Scripts\Activate.ps1
 
 POSIX
 ------
 bash/zsh
-$ source ./trio-ircproxy/bin/activate
+    -   $ source ./trio-ircproxy/bin/activate
 fish
-$ source ./trio-ircproxy/bin/activate.fish
+    -   $ source ./trio-ircproxy/bin/activate.fish
 csh/tcsh
-$ source ./trio-ircproxy/bin/activate.csh
+    -   $ source ./trio-ircproxy/bin/activate.csh
 PowerShell 
-$ ./trio-ircproxy/bin/Activate.ps1
+    -   $ ./trio-ircproxy/bin/Activate.ps1
 
 You will need to *activate* the the venv everytime
 you run the trio-ircproxy.py app. After you have activated the venv type **python
 ~/Ircproxy/trio-ircproxy/trio-ircproxy.py** to run the app. Don’t forget to install the
-requirements.txt with **pip3 install -r ~/Ircproxy/trio-ircproxy/requirements.txt** (just once forever).
+requirements.txt with **pip3 install -r ~/Ircproxy/trio-ircproxy/requirements.txt** (just once each upgrade).
 
 Copyright License
 =================
