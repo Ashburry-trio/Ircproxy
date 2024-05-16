@@ -310,7 +310,10 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
     except (EndSession, OSError, MemoryError, OverflowError, RuntimeError, WindowsError,
                 BlockingIOError, BaseException, BaseExceptionGroup, trio.EndOfChannel, trio.BrokenResourceError) as e:
-        return
+        print('Error Below:')
+        print(e)
+        print(e.args)
+        raise
     except KeyboardInterrupt:
         raise
     finally:
@@ -427,13 +430,18 @@ async def write_loop(client_socket: trio.SocketStream |
                     await trio.sleep(0.125)
                 continue
             except (trio.BusyResourceError,trio.ClosedResourceError, OSError, gaierror, trio.TooSlowError,
-                    ExceptionGroup, BaseException, BaseExceptionGroup, EndSession, trio.BrokenResourceError):
-                raise EndSession('Write Error. ' + which_sock)
+                    ExceptionGroup, BaseException, BaseExceptionGroup, trio.BrokenResourceError,
+                    trio.NeedHandshakeError, ConnectionRefusedError, ConnectionResetError,
+                    ConnectionAbortedError, ConnectionError, EndSession) as e:
+                raise EndSession('Write Error. ' + which_sock + ' '+str(e)+' '+str(e.args))
 
 
 async def script_command(client_socket, server, line):
+    line = line.decode('utf8', errors="replace")
+    line = line.split(' ')
     if line[0][0] == '@':
         line = line[1:]
+
     source = ''
     if line[0][0] == ':':
         source = line[0][1:]
@@ -448,16 +456,16 @@ async def script_command(client_socket, server, line):
             target = line[1]
         else:
             target = ''
-    low_line = line.lower()
+    low_line = ' '.join(line).lower()
     low_line = low_line.split(' ')
     if low_line[1] == 'quit':
-        if await UserCommands.user_QUIT(client_socket, server, source) is True:
+         if await UserCommands.user_QUIT(client_socket, server, source) is True:
             return True
     if low_line[1] == 'nick':
         if await UserCommands.user_NICK_change(client_socket, server, source, target) is True:
             return True
     if low_line[1] == 'part':
-        if await UserCommands.user_PART(client_socket, server, source, target) is True:
+         if await UserCommands.user_PART(client_socket, server, source, target) is True:
             return True
 
     if source and len(low_line) >= 4 and len(low_line[3]) >= 3 and low_line[1] == 'privmsg' and low_line[3][1] == '.':
@@ -483,7 +491,6 @@ def isme(client_socket, server, nick, target='') -> bool:
     """Check if server is cs or nick is mynick or nick is
         *Status and return True or False
     Vars:
-        :client_socket: client socket
         :server: cs or ss
         :nick: nick to check
         :target: target nick to check
@@ -514,17 +521,17 @@ class UserCommands(object):
         if '!' in source:
             source = source.split('!')[0]
         source = source.lower()
-        if '.lang'+source in catch_all:
-            del catch_all['.lang'+source]
+        if '.script'+source in catch_all:
+            del catch_all['.script'+source]
         return False
     async def user_NICK_change(cls, client_socket, source, target) -> bool:
         source_full = source
         if '!' in source:
             source = source.split('!')[0]
         source = source.lower()
-        if '.lang' + source in catch_all:
-            catch_all['.lang'+target] = catch_all['.lang' + source]
-            del catch_all['.lang' + source]
+        if '.script' + source in catch_all:
+            catch_all['.script'+target] = catch_all['.script' + source]
+            del catch_all['.script' + source]
         return False
 
     async def user_CMD_set_lang(cls, client_socket, server, source, target, cmd, parms) -> bool:
@@ -532,8 +539,8 @@ class UserCommands(object):
         if '!' in source:
             source = source.split('!')[0]
         source = source.lower()
-        if '.lang'+source in catch_all:
-            del catch_all['.lang'+source]
+        if '.script'+source in catch_all:
+            del catch_all['.script'+source]
             if socket_data.mylang[client_socket].split(' ')[1][:2] == 'en':
                 tr = cmd
             else:
@@ -607,7 +614,7 @@ class UserCommands(object):
                 question = question.encode('utf8', errors='replace')
                 await socket_data.mysockets[client_socket].send_all(question)
             return True
-        catch_all['.lang'+source] = clsuser_CMD_set_lang
+        catch_all['.script'+source] = cls.user_CMD_set_lang
 
     User_CMD: dict[str, Callable] = {}
     User_CMD['.lang'] = user_CMD_set_lang
@@ -623,12 +630,14 @@ class UserCommands(object):
         if server == 'cs':
             source_nick = socket_data.mynick[client_socket].lower()
         try:
-            if '.lang'+source_nick in catch_all:
-                catch_all['.lang'+source_nick](client_socket, server, source_nick, target_nick, cmd, parms)
+            if '.script'+source_nick in catch_all:
+                catch_all['.script'+source_nick](client_socket, server, source_nick, target_nick, cmd, parms)
                 return True
             await UserCommands.User_CMD[cmd](client_socket, server, source_nick, target_nick, cmd, parms)
-        except (BaseException, BaseExceptionGroup):
-            pass
+        except (BaseException, BaseExceptionGroup) as e:
+            print('Excpetion: ', e)
+            print('Traceback: ', traceback.format_exc())
+            return
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        server_socket: trio.SocketStream | trio.SSLStream,
                        single_line: str, split_line: list[str]) -> \
@@ -670,7 +679,7 @@ async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
     if '!' in split_line[0] or '.' in split_line[0] and split_line[0][0] == ':':
         upper_nick_src: str = orig_upper_split[0].split('!')[0].lstrip(':')
         upper_nick_full_src: str = orig_upper_split[0]
-        return_silent = ial.IALData.ial_add_nick(client_socket, nick_src, nick_src_full, chan)
+        return_silent = ial.IALData.ial_add_nick(client_socket, nick_src, upper_nick_full_src.lower(), chan)
     if return_silent is True:
         return False
     return None
@@ -719,7 +728,7 @@ def lower_color_and_strip(text: str) -> str:
 async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStream,
                                 server_socket: trio.SocketStream | trio.SSLStream, which_sock) -> None:
     """Read loop to receive data from the socket and pass it to
-        fast_line_split_for_read_loop()
+        cs/ss_received_line()
 
         :client_socket: client socket stream
         :server_socket: irc server socket stream
@@ -1179,6 +1188,7 @@ def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
 
 
 
+
 async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     """Handle a connection to the proxy server.
                         Accept proxy http/1.0 protocol.
@@ -1215,7 +1225,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     if cancel_scope.cancelled_caught:
         await aclose_sockets(cs_before_connect)
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
-        await trio.lowlevel.checkpoint()
+        await trio.sleep(0)
         raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
     try:
         auth = False
@@ -1301,6 +1311,7 @@ async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
         )
         await aclose_sockets(cs_sent_connect)
         return None
+    print('checkpoint: proxy_make_irc_connect')
     await proxy_make_irc_connection(cs_sent_connect, server, port_num)
 
 
@@ -1313,7 +1324,7 @@ async def start_proxy_listener():
 
     listen_ports: str = system_data.Settings_ini["settings"].get("listen_ports", '4321')
     listen_ports = listen_ports.replace(',', ' ').replace(';', ' ').replace('  ', ' ') \
-        .replace('*', '').replace('+', '').strip()
+        .replace('*', '').replace('+', '').replace('\t', ' ').strip()
     while '  ' in listen_ports:
         listen_ports = listen_ports.replace('  ', ' ')
 
@@ -1336,10 +1347,10 @@ async def start_proxy_listener():
                 + 'maybe trio-ircproxy.py is already running somewhere?')
 
             await quit_all()
-            # raise
+            raise
             # print("EXC: " + str(exc.args))
         else:
-            # raise
+            raise
             pass
     print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
     try:

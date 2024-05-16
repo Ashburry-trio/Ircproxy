@@ -11,9 +11,11 @@ if "%~1"=="-FIXED_CTRL_C" (
 echo.
 echo Starting trio-ircproxy.py in virtual-environment.
 echo While this window is open, the proxy server will
-echo be available and running.
+echo be available and running. DO NOT share your port 
+echo numbers or IP address with anybody! Care has been 
+echo taken to NOT let this information leak to the public.
 echo.
-echo Running ".\activate.bat" and "python.exe .\trio-ircproxy\trio-ircproxy.py"
+echo Calling ".\activate.bat" and executing "python.exe .\trio-ircproxy\trio-ircproxy.py"
 echo please wait...
 IF EXIST ".\activate.bat" (
     call ".\activate.bat"
@@ -22,7 +24,7 @@ IF EXIST ".\activate.bat" (
         call "%UserProfile%\Documents\Ircproxy-main\activate.bat"
         goto end1
     ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy\" (
-        call "%UserProfile%\Documents\trio-ircproxy\activate.bat"
+        call "%UserProfile%\Documents\Ircproxy\activate.bat"
         goto end1
     ) ELSE IF EXIST "%UserProfile%\Ircproxy-main\" (
         call "%UserProfile%\Ircproxy-main\activate.bat"
@@ -35,7 +37,7 @@ IF EXIST ".\activate.bat" (
 echo ERROR, unable to find "activate.bat"
 goto done
 :end1
-IF EXIST "trio-ircproxy\trio-ircproxy.py" (
+IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
     python.exe .\trio-ircproxy\trio-ircproxy.py
     goto done
 ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy-main\trio-ircproxy\" (

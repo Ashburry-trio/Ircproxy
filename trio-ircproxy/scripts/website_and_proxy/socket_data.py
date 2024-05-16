@@ -103,7 +103,6 @@ class SocketData:
         cls.conn_timeout[client_socket] = None
         cls.conn_timeout[server_socket] = None
         cls.mylang[client_socket] = 'en'
-        cls.translate[client_socket] = do_translate
         cls.mysockets[client_socket] = server_socket
         cls.mysockets[server_socket] = client_socket
         cls.dcc_chat[client_socket] = {}
