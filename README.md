@@ -43,14 +43,14 @@ If you are using Linux then you need to install manually; this is done with:
 **python3.12 -m venv ~/Ircproxy/trio-ircproxy/venv** then look in **./trio-ircproxy/venv/bin** 
 for the **activate** script compatible with your Linux version. Then use
 google to see how to run it. You will need to *activate* the the venv everytime
-you run the app. After you have activated the venv type **python3.12
+you run the app. After you have activated the venv type **python
 ~/Ircproxy/trio-ircproxy/trio-ircproxy.py** to run the app. Don’t forget to install the
 requirements.txt with **pip3 install -r ~/Ircproxy/trio-ircproxy/requirements.txt**
 
 Copyright License
 =================
 
-BSD Zero-Clause License Copyright (c) 2024, Master Sire GI Kenggi J.P. phd.
+BSD Zero-Clause License Copyright (c) 2024, Master Sire GI Kenggi J.P. PhD.
 *ret. All rights reserved*. Please read *CODE_OF_CONDUCT.md* if you may, and see
 file *LICENCE* for a short read if you plan on using Trio-Ircproxy.py to make
 money or make changes. If you make changes, such as a Pull Request and I use
@@ -64,7 +64,7 @@ The web-server half of the project is available in another repo found at
 page and has a long way to go. Once in awhile I update the repo with the web-site 
 code which you can get working with minimal effort, even start your own web-site
 based on RoseMay; if you require a login I would recommened letting me code the login
-logic as it is tricky and difficult.
+logic as it is tricky and difficult and just change the content on every page except the LICENSE which any license suitable for open source will do.
 
 o end of document.
 
