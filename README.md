@@ -24,7 +24,7 @@ know how to run the app from these Windows only instructions:
 -   type in the input box **cmd.exe** and press **Enter**
 
 -   Extract **ircproxy.zip** by typing at the prompt **cd
-    %UserProfile%\\Downloads** and then **unzip ircproxy.zip -d
+    %UserProfile%\\Downloads** and then **unzip Ircproxy.zip -d
     %UserProfile%** or use your favorite zip application such as
     7-zip.
 
@@ -56,12 +56,18 @@ WINDOWS
 POSIX
 ------
 bash/zsh
+    
     -   $ source ./trio-ircproxy/bin/activate
 fish
+    
     -   $ source ./trio-ircproxy/bin/activate.fish
+
 csh/tcsh
+    
     -   $ source ./trio-ircproxy/bin/activate.csh
+
 PowerShell 
+    
     -   $ ./trio-ircproxy/bin/Activate.ps1
 
 You will need to *activate* the the venv everytime
