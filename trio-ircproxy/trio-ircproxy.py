@@ -635,8 +635,6 @@ class UserCommands(object):
                 return True
             await UserCommands.User_CMD[cmd](client_socket, server, source_nick, target_nick, cmd, parms)
         except (BaseException, BaseExceptionGroup) as e:
-            print('Excpetion: ', e)
-            print('Traceback: ', traceback.format_exc())
             return
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        server_socket: trio.SocketStream | trio.SSLStream,

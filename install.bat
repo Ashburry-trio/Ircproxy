@@ -3,7 +3,7 @@ cls
 echo.
 set pythonversion=%1
 if defined pythonversion goto :start
-echo ERROR: You must run install.bat with a python version parameter. Example: "install.bat -3.8"
+echo ERROR: You must run install.bat with a python version parameter. Example: "install.bat -3.12"
 echo.
 goto complete
 :start
