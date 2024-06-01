@@ -13,6 +13,6 @@ extensions.append('sphinx.ext.mathjax')
 extensions.append('sphinx.ext.viewcode')
 extensions.append('sphinx.ext.graphviz')
 extensions.append('sphinx.ext.autosectionlabel')
-extensions.append('sphinx.ext.autosectionlabel_prefix_document = True')
+extensions.append('sphinx.ext.autosectionlabel_prefix_document')
 autosummary_generate = True
 html_theme = 'default'
