@@ -1,5 +1,5 @@
 Channel Protection
-=====================
+######################
 Flood protection works by counting how many ctcp-replies (for example) you have received
 within a specific amount of time and if it is over the hardcoded limit
 then ctco-replies will be ignored. Unless of course you have sent a ctcp

@@ -1,9 +1,8 @@
-..  contents::
-backlinks : top
 .. |date| date::
 .. |time| date:: %H:%M
 
 Today's date is |date|.
+
 This document was generated on |date| at |time|.
 
 Introduction
