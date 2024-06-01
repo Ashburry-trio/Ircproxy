@@ -11,8 +11,8 @@ don't even need any money to start because we start you off with a lump sum of m
 
 List of Contents
 =====================
-ref:`Introduction`
-ref:`User Pages`
-ref:`Channel Protection`
+:ref:`Introduction`
+:ref:`User Pages`
+:ref:`Channel Protection`
 
 
