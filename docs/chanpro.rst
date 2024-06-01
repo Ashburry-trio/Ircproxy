@@ -1,5 +1,5 @@
-Channel Protection
-######################
+:ref:`Channel Protection`
+##############################
 Flood protection works by counting how many ctcp-replies (for example) you have received
 within a specific amount of time and if it is over the hardcoded limit
 then ctco-replies will be ignored. Unless of course you have sent a ctcp
@@ -46,3 +46,9 @@ A six-character password can be hacked/guessed in slightly less than 2 weeks. If
 will be hacked as soon as you use it. You can also securely share your password without actually letting the person view
 your password by using the MyProxyIP.com website so they can identify with passwords but cannot change the password
 nore share the password with anybody else. Just don't make your password `@passwd` and everything will work just fine.
+
+:ref:`Introduction`
+########################
+
+:ref:`User Pages`
+#######################
