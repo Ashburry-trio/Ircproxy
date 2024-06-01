@@ -1,5 +1,5 @@
-Trio-Ircproxy Proxy Server for IRC
-===================================
+Introduction
+===============
 The difference between this proxy server and another proxy server
 is this one handles traffic Intended for Internet Relay Chat clients and servers.
 Trio-Ircproxy.py provides intelligent flood protection, room rules, xdcc search both
