@@ -5,7 +5,7 @@ Today's date is |date|    year/month/day.
 
 This document was generated on |date| at |time|.
 
-:ref:`Introduction`
+Introduction
 ########################
 The difference between this proxy server and another proxy server
 is this one handles traffic Intended for Internet Relay Chat clients and servers.

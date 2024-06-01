@@ -1,4 +1,4 @@
-:ref:`User Pages`
+User Pages
 ######################
 User pages are web-pages on the www.MyProxyIP.com/user/<username> web-site
 where stats are kept about the user such as /whois information but over a larger period of time.
