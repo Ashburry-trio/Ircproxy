@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 numfig = True
 #language = 'ja'
-extensions = []
+extensions=[]
 extensions.append('sphinx.ext.todo')
 extensions.append('sphinx.ext.autodoc')
 #extensions.append('sphinx.ext.autosummary')
@@ -12,7 +12,7 @@ extensions.append('sphinx.ext.intersphinx')
 extensions.append('sphinx.ext.mathjax')
 extensions.append('sphinx.ext.viewcode')
 extensions.append('sphinx.ext.graphviz')
-
-
+extensions.append('sphinx.ext.autosectionlabel')
+extensions.append('sphinx.ext.autosectionlabel_prefix_document = True')
 autosummary_generate = True
 html_theme = 'default'
