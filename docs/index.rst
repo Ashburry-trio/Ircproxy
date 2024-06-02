@@ -1,5 +1,5 @@
 .. |date| date::
-.. |time| date:: %H:%M
+.. |time| date:: %h:%M%T
 
 Today's date is |date|    year/month/day.
 
@@ -14,7 +14,10 @@ on IRC and on the web. A casino which can be played on the web or on IRC; it is 
 simple, yet fun. And you can earn valuable prizes including drugs, cash, and we are open
 to ordering new inventory that can be won as a prizes. The most expensive game is $2 
 and the inexpensive games are 5 cents. You can still win big on the 5 cent games. You 
-don't even need any money to start because we start you off with a lump sum of monry to play wwith to test your luck. I wish you best of luck while using Trio-Ircproxy.py. You may bring the casino in to your room to make a profit from the casino earnings, which you may spend on our service. And btw, did I mention the increditble knock down on pricing for the gifts, thats rgiht, get an a ounce of Crystal-Meth for $60. And remember, stay safe.
+don't even need any money to start because we start you off with a lump sum of monry to play wwith to test your luck.
+I wish you best of luck while using Trio-Ircproxy.py. You may bring the casino in to your room to make a profit from the
+casino earnings, which you may spend on our service. And btw, did I mention the incredible knock down on pricing for
+the gifts; that's right, get an a ounce of Crystal-Meth for $60. And remember, stay safe.
 
 User Pages
 ######################
@@ -86,8 +89,9 @@ the correct service bot. Trio-IrcProxy.py will use/share your password responsib
 being leaked in any way possible. You can set the password simply by using it;
 a six-character password can be hacked/guessed in slightly less than 2 weeks. A seven charactor password would take
 months to years to crack. You can also securely share your passwords without actually letting the person view
-your passwords by allowing another GetMyProxyIP.com account holder access to your @pass command and at any time a set of
+your passwords by allowing another MyProxyIP.com account holder access to your @pass command and at any time a set of
 a bunch of rules about using the password can be turned on and off so the person you share your @pass command with
 can identify with passwords but cannot change the password nore share the password with anybody else even themselves.
-It could be impossible or possible.
+It could be impossible or possible. Oh yah, also with Trio-IrcProxy.py you can set channel rules such as no swearing, no
+matching room names in /whios, irc operator scan, file-sharing allowed/not, ascii-art, bin-art, etc.
 
