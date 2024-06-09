@@ -1,5 +1,5 @@
 .. |date| date::
-.. |time| date:: %H:%M
+.. |time| date:: %H :%M
 
 Today's date is |date|    year/month/day.
 
