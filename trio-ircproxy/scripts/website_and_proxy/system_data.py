@@ -32,6 +32,23 @@ makedirs(xdccdir_path, exist_ok=True)
 makedirs(os.path.join(_dir, 'settings'), exist_ok=True)
 makedirs(os.path.join(_dir, 'memory'), exist_ok=True)
 
+from configparser import ConfigParser as CF
+
+
+def config_save(config: ConfigParser, file: str):
+    with open(file, 'w') as configfile:
+        config.write(configfile)
+
+def load_status() -> CF:
+    config = CF()
+    config.read('status.ini')
+    if not config["status"]['name'].startswith('*'):
+        config['status']['name'] = '*PROXY'
+    if not config["status"]['fullname'].startswith(config['status']['name']) or not fnmatch(config["status"]['fullname'],"?*!?*@?*.?*" ):
+        config['status']['fullname'] = config['status']['name'] + "!Bauderr@www.MyProxyIP.com"
+    config_save(config, 'status.ini')
+    return config
+
 
 class SystemData:
     xdcc_chan_list: set[str] = set({})
@@ -41,35 +58,35 @@ class SystemData:
         mkdir(xdccdir_path)
     xdccdir_path = xdccdir_path
     sysdir_path = sysdir_path
-    authfile_path: str = os.path.join(sysdir_path, "auth.json")
+    authfile_path: str = os.path.join(sysdir_path, "auth.ini")
     fryserverfile_path: str = os.path.join(_dir, 'settings', 'fryserver.ini')
     settingsfile_path: str = os.path.join(_dir, 'settings', 'bnc_settings.ini')
     user_settings_path: str = os.path.join(_dir, 'settings', 'user_settings.ini')
-    loggedinfile_path: str = os.path.join(_dir, 'memory', 'logged_in.json')
-    nickhistoryfile_path: str = os.path.join(_dir, 'memory', "nicknames_history.json")
-    xdcc_han_chat_file_path: str = os.path.join(xdccdir_path, "xdcc_chans_botsearch.json")
-    xdcc_chans_www_file_path: str = os.path.join(xdccdir_path, "xdcc_chans_list.json")
-    xbot_file_path: str = os.path.join(xdccdir_path, "xdcc_bots.json")
-    xdcc_chansfile_path: str = os.path.join(xdccdir_path, "xdcc_chans.json")
-    xdcc_chan_chat_file_path: str = os.path.join(xdccdir_path, "xdcc_chan_chat.json")
+    loggedinfile_path: str = os.path.join(_dir, 'memory', 'logged_in.ini')
+    nickhistoryfile_path: str = os.path.join(_dir, 'memory', "nicknames_history.ini")
+    xdcc_han_chat_file_path: str = os.path.join(xdccdir_path, "xdcc_chans_botsearch.ini")
+    xdcc_chans_www_file_path: str = os.path.join(xdccdir_path, "xdcc_chans_list.ini")
+    xbot_file_path: str = os.path.join(xdccdir_path, "xdcc_bots.ini")
+    xdcc_chansfile_path: str = os.path.join(xdccdir_path, "xdcc_chans.ini")
+    xdcc_chan_chat_file_path: str = os.path.join(xdccdir_path, "xdcc_chan_chat.ini")
     xdcc_bot_list: List[str | int] = ['nick', 1000]
     # keep track of chat & list channels
     xdcc_chan_chat: dict = {}
     # count how many bots I have working in the channels
     xdcc_chan_count: dict = {}
 
-    FryServer_json: ConfigParser = ConfigParser()
+    FryServer_ini: ConfigParser = ConfigParser()
     Settings_ini: ConfigParser = ConfigParser()
     user_settings: dict[[str, dict[str,set[str]]]] = {}
     #  system_data.user_settings['by_username'][auth[0]]
 
-    Nick_History_json: Dict[str, Dict[str, str]] = dict()
-    Nick_History_json['nicknames'] = {}
+    Nick_History_ini: Dict[str, Dict[str, str]] = dict()
+    Nick_History_ini['nicknames'] = {}
 
-    Loggedin_json: Dict[str, Dict[str, str]] = dict()
-    Loggedin_json['loggedin'] = {}
+    Loggedin_ini: Dict[str, Dict[str, str]] = dict()
+    Loggedin_ini['loggedin'] = {}
 
-    xdcc_www_chans_file_path: os.path.join(sysdir_path, "xdcc_chans.json")
+    xdcc_www_chans_file_path: os.path.join(sysdir_path, "xdcc_chans.ini")
     xdcc_www_chans = set()
     xdcc_www_chans.update({'#5ioE'})
 
@@ -293,6 +310,6 @@ class SystemData:
             if not read:
                 cls.save_fryfile()
             else:
-                cls.FryServer_json.read(cls.fryserverfile_path)
-                cls.FryServer_json.add_section('ip_list')
+                cls.FryServer_ini.read(cls.fryserverfile_path)
+                cls.FryServer_ini.add_section('ip_list')
         return None

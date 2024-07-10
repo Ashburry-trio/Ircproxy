@@ -9,24 +9,24 @@ from random import randint
 from collections import deque
 from typing import Dict, Deque, Set, Union
 from system_data import SystemData as system_data
+from fnmatch import fnmatch
 from socket import gaierror
-import translate
+
+system_data.load_settings()
 
 
 # Duplicated in ..trio_ircproxy.actions.yes_no()
-def yes_no(msg: str = ''):
+def yes_no(msg: str = '') -> int:
     if not msg:
         return 0
     msg = str(msg).lower()
     if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
             or msg == 'true' or msg == 'allow' or msg == 'sure' or msg == 'fine'\
-            or msg.startswith('affirm') or msg == '*':
+            or msg.startswith('affirm') or msg == 'mhmm' or msg == '*':
         return 1
     else:
         return 0
 
-
-system_data.load_settings()
 
 async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = None) -> None:
     """Close both irc-server and irc-client sockets together
@@ -39,18 +39,18 @@ async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = 
     await send_quit(sc_socket)
     return None
 
-async def send_quit(sc_socket):
+async def send_quit(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """
     Function is also located in socket_data. A change here must be changed there.
-
-    @param sc_socket:
+    vars:
+        :sc_socket: Any socket either client or server
     @return:
     """
-    from ..website_and_proxy.socket_data import SocketData
     """Replace the quitmsg"""
+
     if not sc_socket:
         return
-
+    from ..trio_ircproxy.actions import send_quit as action_send_quit
     try:
         if SocketData.which_socket[sc_socket] == 'cs':
             client_socket = sc_socket
@@ -59,14 +59,9 @@ async def send_quit(sc_socket):
             server_socket = sc_socket
             client_socket = SocketData.mysockets[sc_socket]
     except (KeyError):
-        return
-    await send_quit_quit(server_socket, client_socket)
-
-def do_translate(cs, msg: str) -> str:
-    if SocketData.mylang[cs] == 'en':
-        return msg
-    tr = translate.Translator(from_lang='en', to_lang=SocketData.mylang[cs])
-    return tr.translate(msg)
+        return None
+    await actions.action_send_quit(server_socket)
+    return None
 
 class SocketData:
     current_count: Dict[trio.SocketStream | trio.SSLStream, int]

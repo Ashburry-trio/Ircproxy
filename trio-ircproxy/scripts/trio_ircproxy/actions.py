@@ -178,7 +178,7 @@ def quitmsg(msg: str = None, fto = None, client_socket: trio.SocketStream | trio
         SocketData.clear_data(client_socket)
     return None
 
-def send_all(fto: trio.SocketStream | trio.SSLStream, msg: str) -> None:
+def send_all(fto: list[trio.SocketStream | trio.SSLStream] | tuple[trio.SocketStream | trio.SSLStream] | trio.SocketStream | trio.SSLStream, msg: str) -> None:
     if isinstance(fto, list) or isinstance(fto, tuple):
         for send in fto:
             sc_send(send, msg)

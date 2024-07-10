@@ -18,22 +18,14 @@
 #
 # Linux:
 #    cd ~/Ircproxy
-#    python3.11 -m venv ./trio-ircproxy/venv
-#    source ./trio-ircproxy/venv/bin/activate     <- different for each distro of linux
-# python -m pip --require-virtualenv install pip
-# python -m pip --require-virtualenv install --upgrade pip
-# pip --require-virtualenv install wheel
-# pip --require-virtualenv install -r .\trio-ircproxy\requirements.txt
-# python ./trio-ircproxy/trio-ircproxy.py
-#
+#    chmod +x ./install.sh
+#    ./install.sh
+#   ./runproxy.sh
 #  If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
 #  After executing the above commands you only need to execute the following
 #  two commands to run the proxy server (on Linux):
-#    source ./trio-ircproxy/venv/bin/activate  <- different for different terminals in linux
+#    source ./activate.sh  <- different for different terminals in linux. Use Bash
 #    python ./trio-ircproxy/trio-ircproxy.py
-#
-# I need to create an install script for Linux and the runproxy.bat for Linux.
-# It will be tricky since different distros use different activation scripts.
 
 from __future__ import annotations
 
@@ -67,27 +59,19 @@ from socket import gaierror
 from socket import error
 from sys import argv
 from threading import Timer
-from time import time
+from time import time as ctime
 from typing import Deque, Any, Coroutine
 from chardet import detect
 import sys
 import os
 from cryptography.fernet import Fernet
-WWW_SHORT_URL = 'www.myircproxyip.com'
-WWW_LONG_URL = 'https://wwww.myircproxyip.com/'
 _dir = path.dirname(path.abspath(__file__))
 chdir(realpath(dirname(expanduser(argv[0]))))
 
-VERSION_NUM = "PEACE-3.0.1"
-
-
-def encrypt(message: bytes, key: bytes) -> bytes:
-    return Fernet(key).encrypt(message)
-
-
-def decrypt(token: bytes, key: bytes) -> bytes:
-    return Fernet(key).decrypt(token)
-
+VERSION_NUM = "3.0.1"
+WWW_SHORT_URL = 'www.MyProxyIP.com'
+WWW_LONG_URL = 'https://wwww.MyProxyIP.com/'
+NAKED_URL = "MyProxyIP.com"
 
 def colourstrip(data: str) -> str:
     """Strips the mIRC colour codes from the text in data
@@ -146,7 +130,7 @@ def colourstrip(data: str) -> str:
 
 async def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream,
                             server_socket: trio.SSLStream | trio.SocketStream):
-    socket_data.echo(client_socket, 'There was a exploit attempt by IRC network.')
+    socket_data.echo(client_socket, 'There was a exploit attempt by IRC server.')
     await actions.send_quit(server_socket)
 
 
@@ -254,8 +238,8 @@ def get_words(text: str) -> list:
     """Returns the words list of the first line in list
 
         vars:
-            :@param text: A string of text with lines ending in cr, lf, and crlf
-            :@return: a list of words split on whitespaces
+            :text: A string of text with lines ending in cr, lf, and crlf
+            :returns: a list of words split on whitespaces
 
     """
     text = text.strip()
@@ -263,6 +247,96 @@ def get_words(text: str) -> list:
     lower_string = handle_newline(lower_string)
     return lower_string.split(' ')
 
+
+identd_list: list[str] = []
+async def identd_handler(server_socket: trio.SocketStream) -> None:
+    print('Identd Server Connection in Progress...')
+    global server_read_all
+    server_read_all = b''
+    status: str = ''
+
+    try:
+        identd_copied: str = identd_list.pop()
+    except IndexError:
+        await trio.sleep(0)
+        return None
+    await trio.sleep(0)
+    try:
+        s: trio.SocketStream = await trio.open_tcp_stream(identd_copied, 114, happy_eyeballs_delay=0.25)
+        print('Connected to client identd server on ' + identd_copied)
+        status = 'connection'
+    except (BaseException, BaseExceptionGroup):
+        print('NO identd running on ' + identd_copied)
+        status = 'no_connection'
+        s = ''
+    with trio.CancelScope() as scope:
+        async with trio.open_nursery() as nursery:
+            try:
+                nursery.start_soon(send_identd_server, server_socket, s, status, scope)
+                if status == 'connection':
+                    nursery.start_soon(send_identd_client, server_socket, s)
+                nursery.start_soon(identd_expire_both, server_socket, s)
+            except (BaseException, BaseExceptionGroup):
+                scope.cancel()
+    return None
+
+
+async def identd_expire_both(server_socket: trio.SocketStream, s: trio.SocketStream) -> None:
+    try:
+        await trio.sleep(150)
+    except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
+        pass
+    await identd_expired(server_socket, s)
+    await trio.sleep(0)
+    return None
+async def identd_expired(server_socket, s) -> None:
+    try:
+        await s.aclose()
+    except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
+        pass
+    try:
+        await server_socket.aclose()
+    except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
+        pass
+    return None
+
+
+server_read_all: bytes = b''
+async def send_identd_server(server_socket, s, status, scope) -> None:
+    global server_read_all
+    server_read_all = b''
+    try:
+        await trio.sleep(1)
+        async for data in server_socket:
+            server_read = data
+            print(f"server: {data!r}")
+            if status == 'no_connection':
+                server_read_all += server_read
+                if server_read_all.endswith(b'\n'):
+                    await server_socket.send_all(server_read_all.strip() + b' : USERID : UNIX : MyProxyIP\r\n')
+                    server_read_all = b''
+                    break
+            if status == 'connection':
+                await s.send_all(server_read)
+                if server_read.endswith(b'\n'):
+                    break
+    except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
+        await trio.sleep(0)
+        raise
+    scope.cancel()
+    return None
+
+async def send_identd_client(server_socket, s) -> None:
+    try:
+        await trio.sleep(1.390)
+        async for data in s:
+            print(f"client: {data!r}")
+            await server_socket.send_all(data)
+            if data.endswith('\n'):
+                break
+    except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
+        await trio.sleep(0)
+    return None
 
 
 async def proxy_make_irc_connection(client_socket: trio.SocketStream
@@ -275,7 +349,6 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         :return: returns None
 
     """
-    ss_hostname = ss_hostname.lower()
     server_socket: trio.SSLStream | trio.SocketStream
     try:
         granted: bytes = b"HTTP/1.0 200 connection started with irc server.\r\n\r\n"
@@ -458,6 +531,8 @@ async def script_command(client_socket, server, line):
             target = ''
     low_line = ' '.join(line).lower()
     low_line = low_line.split(' ')
+    if len(low_line) < 2:
+        return False
     if low_line[1] == 'quit':
          if await UserCommands.user_QUIT(client_socket, server, source) is True:
             return True
@@ -485,7 +560,6 @@ async def script_command(client_socket, server, line):
         target = ''
 
 import translate
-from socket_data import do_translate
 
 def isme(client_socket, server, nick, target='') -> bool:
     """Check if server is cs or nick is mynick or nick is
@@ -754,7 +828,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
     read_count: int = 0
     while True:
         try:
-            read_sock = await dest_socket.receive_some(655)
+            read_sock = await dest_socket.receive_some(2048)
         except trio.BusyResourceError:
             await trio.sleep(0.100)
             continue
@@ -766,7 +840,7 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             #print('IRC_server-Closed-Connection: ', e,e.args)
             raise EndSession(e.args)
         if not read_sock:
-            raise EndSession('irc-server-closed-connection-to-proxy.')
+            raise EndSession(str(rcvd_line) + ' irc-server-closed-connection-to-proxy.')
         read_line += read_sock
         read_sock = b''
         while True:
@@ -882,7 +956,7 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         # Keep track of neither 376 nor 422 is used.
         if not socket_data.state[client_socket]['connected']:
             socket_data.state[client_socket]['doing'] = 'signed on'
-            socket_data.state[client_socket]['connected'] = time()
+            socket_data.state[client_socket]['connected'] = ctime()
     if split_line[0] == '376':
         # End of /motd
         if socket_data.state[client_socket]['motd_def']:
@@ -1008,10 +1082,10 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     :returns: None
 
     """
-    prefix = ':www.myircproxyip.com 375 ' + mynick + ' :- '
+    prefix = ':'+WWW_SHORT_URL +' 375 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + WWW_SHORT_URL + '  Message of the Day -')
-    prefix = ':www.myircproxyip.com 372 ' + mynick + ' :- '
-    actions.sc_send(client_socket, prefix + '\x02www.myircproxyip.com MOTD\x02 -')
+    prefix = ':'+WWW_SHORT_URL +' 372 ' + mynick + ' :- '
+    actions.sc_send(client_socket, prefix + '\x02'+WWW_SHORT_URL+' MOTD\x02 -')
     actions.sc_send(client_socket, prefix)
     actions.sc_send(client_socket, prefix + 'To connect to a SSL port, '
                                             '\x02DO NOT\x02 prefix the port with -')
@@ -1032,9 +1106,9 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
                                             "\x02/motd\x02 -")
     actions.sc_send(client_socket, prefix + "Trio-ircproxy.py and Machine-Gun mSL script"
                                             " official website: -")
-    actions.sc_send(client_socket, prefix + "W-W-W: \x1fhttps://www.myIrcProxyIP.com/\x1f -")
+    actions.sc_send(client_socket, prefix + "W-W-W: \x1fhttps://www.MyProxyIP.com/\x1f -")
     actions.sc_send(client_socket, prefix + "'X-Clacks-Overhead':\x02 'GNU Terry Pratchett' \x02-")
-    prefix = ':www.myircproxyip.com 376 ' + mynick + ' :- '
+    prefix = ':'+WWW_SHORT_URL+' 376 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + 'End of /MOTD -')
     return None
 
@@ -1096,7 +1170,7 @@ def check_fry_server(ip_addy: tuple | list | str) -> bool:
     max_cons: int = int(system_data.FryServer_json["settings"]['max_reconnections'])
     # int, within seconds of each other
     max_time: int = int(system_data.FryServer_json["settings"]["max_time"])
-    new_time: str = str(int(time()))
+    new_time: str = str(int(ctime()))
     for old_ip in list(system_data.FryServer_json["ip_list"]):
         old_check: str = system_data.FryServer_json["ip_list"][old_ip]
         old_check_split: list[str] = old_check.split(" ")
@@ -1195,12 +1269,14 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
                         ready for reading (1 byte at a time).
         :@return: None
     """
+    global identd_list
     # Write down tries per minute for this IP. And just close them all if its too many.
-
     try:
-        hostname: str = cs_before_connect.socket.getpeername()[0]
-    except error:
+        hostname: str = cs_before_connect.socket.getpeername()[0].lower()
+        identd_list.append(hostname)
+    except (BaseException, BaseExceptionGroup):
         await cs_before_connect.aclose()
+        print('socket closed due to invalid hostname')
         return
     if not (check_fry_server):
         await aclose_sockets(cs_before_connect)
@@ -1260,7 +1336,10 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             if auth[0].lower() not in system_data.user_settings['by_username']:
                 system_data.user_settings['by_username'][auth[0].lower()] = set()
             system_data.user_settings['by_username'][auth[0].lower()].add(cs_before_connect)
-        await before_connect_sent_connect(cs_before_connect, str_lines[0])
+        try:
+            await before_connect_sent_connect(cs_before_connect, str_lines[0])
+        except EndSession:
+            pass
     finally:
         await aclose_both(cs_before_connect)
 
@@ -1336,6 +1415,8 @@ async def start_proxy_listener():
                     continue
                 nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(f))
                 print("proxy is ready, listening on port " + str(f))
+            nursery.start_soon(trio.serve_tcp, identd_handler, 113)
+            print('Started Identd server')
             print("press Ctrl+C to quit...\n")
     except (EndSession, BaseException, BaseExceptionGroup,
             KeyboardInterrupt, OSError, gaierror) as exc:
