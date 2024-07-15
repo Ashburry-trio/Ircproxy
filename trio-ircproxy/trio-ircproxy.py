@@ -433,7 +433,7 @@ async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
     server_socket: trio.SSLStream | trio.SocketStream
     ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
     ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
-    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
     try:
         server_socket: trio.SocketStream | trio.SSLStream = await trio.open_ssl_over_tcp_stream(
             ss_hostname,
