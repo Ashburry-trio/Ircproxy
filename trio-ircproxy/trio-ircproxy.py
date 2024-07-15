@@ -248,27 +248,34 @@ def get_words(text: str) -> list:
     return lower_string.split(' ')
 
 
-identd_list: list[str] = []
+identd_list: list[list[str]] = []
 async def identd_handler(server_socket: trio.SocketStream) -> None:
     print('Identd Server Connection in Progress...')
-    global server_read_all
-    server_read_all = b''
+    global identd_list
     status: str = ''
+    identd_one: str = ''
+    identd_copied: list[str] = []
 
-    try:
-        identd_copied: str = identd_list.pop()
-    except IndexError:
-        await trio.sleep(0)
-        return None
+    while True:
+
+        try:
+            identd_copied: list[str] = identd_list.pop()
+            identd_one = identd_copied[0]
+        except IndexError:
+            await trio.sleep(0.350)
+            return None
+        if identd_copied[1] > ctime + 60 * 3:
+            continue
+        break
     await trio.sleep(0)
+    s: trio.SocketStream
     try:
-        s: trio.SocketStream = await trio.open_tcp_stream(identd_copied, 114, happy_eyeballs_delay=0.25)
-        print('Connected to client identd server on ' + identd_copied)
+        s = await trio.open_tcp_stream(identd_one, 114, happy_eyeballs_delay=0.10)
+        print('Connected to client identd server on ' + identd_one)
         status = 'connection'
     except (BaseException, BaseExceptionGroup):
-        print('NO identd running on ' + identd_copied)
+        print('NO identd running on ' + identd_one)
         status = 'no_connection'
-        s = ''
     with trio.CancelScope() as scope:
         async with trio.open_nursery() as nursery:
             try:
@@ -286,9 +293,11 @@ async def identd_expire_both(server_socket: trio.SocketStream, s: trio.SocketStr
         await trio.sleep(150)
     except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
         pass
-    await identd_expired(server_socket, s)
-    await trio.sleep(0)
+    finally:
+        await identd_expired(server_socket, s)
     return None
+
+
 async def identd_expired(server_socket, s) -> None:
     try:
         await s.aclose()
@@ -298,12 +307,11 @@ async def identd_expired(server_socket, s) -> None:
         await server_socket.aclose()
     except (BaseException, BaseExceptionGroup, Exception, ExceptionGroup):
         pass
+    await trio.sleep(0)
     return None
 
 
-server_read_all: bytes = b''
 async def send_identd_server(server_socket, s, status, scope) -> None:
-    global server_read_all
     server_read_all = b''
     try:
         await trio.sleep(1)
@@ -372,21 +380,26 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
             return
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ':' + str(port)
-        async with trio.open_nursery() as nursery:
-            # Server_socket marked by 'ss' as the last parameter, writes to cs
-            nursery.start_soon(socket_received_chunk, client_socket, server_socket, 'ss')
-            # client_socket marked by 'cs' as the last parameter, writes to ss
-            nursery.start_soon(socket_received_chunk, client_socket, server_socket, 'cs')
-            # Write to client
-            nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[client_socket], 'cs')
-            # Write to server
-            nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
+        with trio.CancelScope() as scope:
+            async with trio.open_nursery() as nursery:
+                try:
+                    # Server_socket marked by 'ss' as the last parameter, writes to cs
+                    nursery.start_soon(socket_received_chunk, client_socket, server_socket, 'ss')
+                    # client_socket marked by 'cs' as the last parameter, writes to ss
+                    nursery.start_soon(socket_received_chunk, client_socket, server_socket, 'cs')
+                    # Write to client
+                    nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[client_socket], 'cs')
+                    # Write to server
+                    nursery.start_soon(write_loop, client_socket, server_socket, socket_data.send_buffer[server_socket], 'ss')
+                except trio.Cancelled:
+                    pass
+
     except (EndSession, OSError, MemoryError, OverflowError, RuntimeError, WindowsError,
-                BlockingIOError, BaseException, BaseExceptionGroup, trio.EndOfChannel, trio.BrokenResourceError) as e:
+            BlockingIOError, BaseException, BaseExceptionGroup, trio.EndOfChannel, trio.BrokenResourceError) as e:
         print('Error Below:')
         print(e)
         print(e.args)
-        raise
+        # raise
     except KeyboardInterrupt:
         raise
     finally:
@@ -400,20 +413,20 @@ async def make_normal_socket(client_socket, ss_hostname: str, port: int) -> trio
         server_socket: trio.SocketStream | trio.SSLStream = \
             await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.18)
     except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-            trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+            trio.BusyResourceError, gaierror, OSError,
             ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
             ConnectionError, BaseException):
         try:
             await socket_data.raw_send(client_socket, None,
                                        b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
             await aclose_sockets(client_socket)
-            return None
+            return
         except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-                trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+                trio.BusyResourceError, gaierror, OSError,
                 ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
                 ConnectionError, BaseException):
             await aclose_sockets(client_socket)
-            return None
+            return
     return server_socket
 
 async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
@@ -429,7 +442,7 @@ async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
             ssl_context=ssl_context,
             happy_eyeballs_delay=0.18)
     except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-            trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+            trio.BusyResourceError, gaierror, OSError,
             ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
             ConnectionError, BaseException):
         try:
@@ -438,7 +451,7 @@ async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
                                            b"HTTP/1.0 502 Unable to connect to remote host.\r\n\r\n")
                 await aclose_sockets(client_socket)
         except (trio.TooSlowError, trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
-                trio.BusyResourceError, gaierror, OSError, trio.NeedHandshakeError,
+                trio.BusyResourceError, gaierror, OSError,
                 ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
                 ConnectionError, BaseException, BaseExceptionGroup):
             await aclose_sockets(client_socket)
@@ -504,9 +517,9 @@ async def write_loop(client_socket: trio.SocketStream |
                 continue
             except (trio.BusyResourceError,trio.ClosedResourceError, OSError, gaierror, trio.TooSlowError,
                     ExceptionGroup, BaseException, BaseExceptionGroup, trio.BrokenResourceError,
-                    trio.NeedHandshakeError, ConnectionRefusedError, ConnectionResetError,
+                    ConnectionRefusedError, ConnectionResetError,
                     ConnectionAbortedError, ConnectionError, EndSession) as e:
-                raise EndSession('Write Error. ' + which_sock + ' '+str(e)+' '+str(e.args))
+                raise EndSession('WRITE LOOP Write Error. ' + which_sock + ' '+str(e)+' '+str(e.args))
 
 
 async def script_command(client_socket, server, line):
@@ -837,10 +850,11 @@ async def socket_received_chunk(client_socket: trio.SocketStream | trio.SSLStrea
             continue
         except (BaseException, BaseExceptionGroup, ExceptionGroup, trio.BrokenResourceError, trio.ClosedResourceError,
                 trio.EndOfChannel, AttributeError) as e:
-            #print('IRC_server-Closed-Connection: ', e,e.args)
-            raise EndSession(e.args)
+            print('IRC_server-Closed-Connection: ', e,e.args)
+            # raise EndSession(e.args)
+            return
         if not read_sock:
-            raise EndSession(str(rcvd_line) + ' irc-server-closed-connection-to-proxy.')
+            raise EndSession(str(read_sock) + ' irc-server-closed-connection-to-proxy.')
         read_line += read_sock
         read_sock = b''
         while True:
@@ -1273,7 +1287,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     # Write down tries per minute for this IP. And just close them all if its too many.
     try:
         hostname: str = cs_before_connect.socket.getpeername()[0].lower()
-        identd_list.append(hostname)
+        identd_list.append([hostname,ctime()])
     except (BaseException, BaseExceptionGroup):
         await cs_before_connect.aclose()
         print('socket closed due to invalid hostname')
@@ -1415,7 +1429,7 @@ async def start_proxy_listener():
                     continue
                 nursery.start_soon(trio.serve_tcp, proxy_server_handler, int(f))
                 print("proxy is ready, listening on port " + str(f))
-            nursery.start_soon(trio.serve_tcp, identd_handler, 113)
+            # nursery.start_soon(trio.serve_tcp, identd_handler, 113)
             print('Started Identd server')
             print("press Ctrl+C to quit...\n")
     except (EndSession, BaseException, BaseExceptionGroup,
@@ -1426,10 +1440,10 @@ async def start_proxy_listener():
                 + 'maybe trio-ircproxy.py is already running somewhere?')
 
             await quit_all()
-            raise
+            # raise
             # print("EXC: " + str(exc.args))
         else:
-            raise
+            # raise
             pass
     print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
     try:
