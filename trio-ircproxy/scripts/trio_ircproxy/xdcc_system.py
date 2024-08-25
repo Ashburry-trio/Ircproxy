@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-from typing import Dict, List
 import trio
 from scripts.website_and_proxy.system_data import SystemData as system_data
 from .xdcc_link import XdccBotSLL
@@ -18,9 +17,9 @@ def cs_send_notice(client_socket: trio.SSLStream | trio.SocketStream, msg):
 
 
 class Xdcc_System:
-    xdcc_settings: Dict[str, Dict[str, str]] = dict()
+    xdcc_settings: dict[str, dict[str, str]] = dict()
     xdcc_settings["settings"] = dict()
-    xdcc_chan_network: Dict[str, str] = {"#5ioE": "Undernet"}
+    xdcc_chan_network: dict[str, str] = {"#5ioE": "Undernet"}
     xdcc_chan_chat = system_data.xdcc_chan_chat
     xdcc_chan_chat.update({"#5ioE-chat": "#5ioE"})
     xdcc_chan_count = system_data.xdcc_chan_count
@@ -63,7 +62,7 @@ def xdcc_commands(client_socket: trio.SocketStream | trio.SSLStream, server_sock
                 cs_send_notice(
                     client_socket,
                     "syntax: /xdcc-add #xdcc-list chat=#chat-search - note: " \
-                    + "the #chat-search channel is optional and is \x02NOT\x02 used when searching by website.")
+                    + "the #chat-search channel is optionaland is \x02NOT\x02 used when searching by website.")
         else:
             cs_send_notice(
                 client_socket,

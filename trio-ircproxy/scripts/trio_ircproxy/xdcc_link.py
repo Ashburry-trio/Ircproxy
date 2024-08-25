@@ -24,7 +24,6 @@ class XdccBotSLL:
         if self.head is not None:
             for node in self.head:
                 if node.nick == NewNode.nick and node.network == NewNode.network:
-                    print('WARNING: Xdcc Bot Already Exists IN LIST...')
                     return
         NewNode.nextdata = self.head
         self.head = NewNode

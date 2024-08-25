@@ -6,26 +6,29 @@
 # Windows:
 #    "install.bat -3.11"  -+-+- (just once, forever. Use your highest installed python version)
 #    "runproxy.bat"
-#        or just; after you have ran installed.bat
+#        or just; after you have run installed.bat:
 #    "runproxy.bat"
 #
 #
-# use the install.bat -3.11 if you are on windows with Python 3.11. It just sets up a virtual-environment
-# and installs pip, upgrades pip, and installs requirements.txt.
+# use the install.bat -3.13 if you are on windows with Python 3.13 installed.
+# FYI: `install.bat` sets up the python3.xx virtual-environment
+# and installs pip, upgrades pip and wheell, and installs requirements.txt.
 # You also have runproxy.bat which is a shortcut to .\trio-ircproxy\venv\Scripts\activate.bat and then
 #  "python.exe .\trio-ircproxy\trio-ircproxy.py"
+#  Note: runrpoxy.bat works on Windows CMD.exe, command.com, and maybe Powershell.exe
+#  (bug and implementation testing is needed continually for powershell to work.)
 #
 #
 # Linux:
 #    cd ~/Ircproxy
 #    chmod +x ./install.sh
-#    ./install.sh
-#   ./runproxy.sh
-#  If using Linux for Windows (Cygwin) change /bin/ to /Scripts/
-#  After executing the above commands you only need to execute the following
-#  two commands to run the proxy server (on Linux):
-#    source ./activate.sh  <- different for different terminals in linux. Use Bash
-#    python ./trio-ircproxy/trio-ircproxy.py
+#    chmod +x ./runproxy.sh
+#    python -V
+#    source ./install.sh -3.12.5
+#   Then everytime after this one-time installation:
+#   source ./runproxy.sh
+
+
 
 from __future__ import annotations
 
@@ -621,90 +624,6 @@ class UserCommands(object):
             del catch_all['.script' + source]
         return False
 
-    async def user_CMD_set_lang(cls, client_socket, server, source, target, cmd, parms) -> bool:
-        source_full = source
-        if '!' in source:
-            source = source.split('!')[0]
-        source = source.lower()
-        if '.script'+source in catch_all:
-            del catch_all['.script'+source]
-            if socket_data.mylang[client_socket].split(' ')[1][:2] == 'en':
-                tr = cmd
-            else:
-                tr = translate.Translator(from_lang=socket_data.mylang[client_socket].split(' ')[1], to_lang='en')
-                tr = tr.translate(cmd)
-            if tr.lower() == 'yes':
-                socket_data.mylang[client_socket] = socket_data.mylang[client_socket].split(' ')[1]
-                mylang = socket_data.mylang[client_socket]
-                if isme(client_socket, server, source, target) is True:
-                    await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG ' +
-                            socket_data.mynick[client_socket] + ' :' +
-                                                 do_translate(client_socket, 'Language set to: '+ mylang))
-                else:
-                    await socket_data.mysockets[client_socket].send_all('PRIVMSG ' + source + ' :'+
-                                            do_translate(client_socket, 'Language set to: ' + mylang))
-            else:
-                if isme(client_socket, server, source, target) is True:
-                    await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG ' +
-                            socket_data.mynick[client_socket] + ' :Language not set')
-                else:
-                    await socket_data.mysockets[client_socket].send_all('PRIVMSG ' + source + ' :Language not set')
-                socket_data.mylang[client_socket] = 'en'
-            return True
-        if len(parms) == 0:
-            code_web = 'Default languages codes: https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes'
-            if isme(client_socket, server, source, target) == True:
-                await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG '
-                                             + socket_data.mynick[client_socket] + ' :'+code_web)
-                await client_socket.send_all('*Status!mg-script@www.myproxyip.com PRIVMSG '
-                                             +socket_data.mynick[client_socket]+' :Usage: '+cmd+' <lang_code>')
-            else:
-                await socket_data.mysockets[client_socket].send_all('PRIVMSG ' + source + ' :' + code_web)
-                await socket_data.mysockets[client_socket].send_all('PRIVMSG '+source+' :Usage: '+cmd+' <lang_code>')
-            return True
-        if parms[:2] != 'en':
-            tr = translate.Translator(from_lang='en', to_lang=parms)
-            question = tr.translate('Do you understand this language? Respond with the word YES.')
-        else:
-            question = 'Do you understand this language? Respond with the word YES.'
-        if 'using 2 letter iso or' in question.lower():
-            if isme(client_socket, server, source, target) == True:
-                error_msg = '*Status!mg-script@www.myproxyip.com PRIVMSG ' + socket_data.mynick[client_socket] \
-                    + ' :ERROR: Unsupported language code'
-                error_msg = error_msg.encode('utf8', errors='replace')
-                await client_socket.send_all(error_msg)
-            else:
-                error_msg = 'PRIVMSG ' + source + ' :ERROR: Unsupported language code'
-                error_msg = error_msg.encode('utf8', errors='replace')
-                await socket_data.mysockets[client_socket].send_all(error_msg)
-            return True
-        else:
-            socket_data.mylang[client_socket] = 'NOT '+parms.upper()
-        if len(parms[0]) >= 2 and parms[:2] == 'en':
-            if isme(client_socket, server, source, target) == True:
-                question = '*Status!mg-script@www.myproxyip.com PRIVMSG ' + socket_data.mynick[
-                    client_socket] + ' :Do you understand this language? Respond with the word YES.'
-                question = question.encode('utf8', errors='replace')
-                await client_socket.send_all(question)
-            else:
-                question = 'PRIVMSG ' + source + ' :Do you understand this language? Respond with the word YES.'
-                question = question.encode('utf8', errors='replace')
-                await socket_data.mysockets[client_socket].send_all(question)
-        else:
-            if isme(client_socket, server, source, target) is True:
-                question = '*Status!mg-script@www.myproxyip.com PRIVMSG ' + socket_data.mynick[
-                    client_socket] + ' :'+ question
-                question = question.encode('utf8', errors='replace')
-                await client_socket.send_all(question)
-            else:
-                question = 'PRIVMSG ' + source + ' :'+ question
-                question = question.encode('utf8', errors='replace')
-                await socket_data.mysockets[client_socket].send_all(question)
-            return True
-        catch_all['.script'+source] = cls.user_CMD_set_lang
-
-    User_CMD: dict[str, Callable] = {}
-    User_CMD['.lang'] = user_CMD_set_lang
     async def execute_user_command(cls, client_socket: trio.SocketStream | trio.SSLStream, server,
                                    source_nick, target_nick, cmd, parms) -> bool:
         """Execute a user command if it exists."""
@@ -717,12 +636,10 @@ class UserCommands(object):
         if server == 'cs':
             source_nick = socket_data.mynick[client_socket].lower()
         try:
-            if '.script'+source_nick in catch_all:
-                catch_all['.script'+source_nick](client_socket, server, source_nick, target_nick, cmd, parms)
-                return True
             await UserCommands.User_CMD[cmd](client_socket, server, source_nick, target_nick, cmd, parms)
         except (BaseException, BaseExceptionGroup) as e:
-            return
+            # Write straight to a socket with a message for/to self (avoid the server when writting to self
+            pass
 async def ss_updateial(client_socket: trio.SocketStream | trio.SSLStream,
                        server_socket: trio.SocketStream | trio.SSLStream,
                        single_line: str, split_line: list[str]) -> \
@@ -986,11 +903,15 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
         socket_data.set_face_nicknet(client_socket)
     elif split_line[0] == '301':
         reason = " ".join(orig_upper_split[4:]).strip(':\r\n\t ')
-        msg = f":{WWW_SHORT_URL} NOTICE {socket_data.mynick[client_socket]}" \
+        msg = f":{NAKED_URL} NOTICE {socket_data.mynick[client_socket]}" \
               f" :User {orig_upper_split[3]} is" \
               f" set away, reason: {reason}"
         actions.sc_send(client_socket, msg)
 
+
+    xdcc_Line: str = split_line.join(' ')
+    if fnmatch(xdcc_Line, "#?* *?x [???] ????*"):
+        pass
     actions.sc_send(client_socket, original_line)
     await trio.sleep(0)
     return None

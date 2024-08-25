@@ -5,15 +5,15 @@ if "%~1"=="-FIXED_CTRL_C" (
    SHIFT
 ) ELSE (
    REM Run the batch with <NUL and -FIXED_CTRL_C
+   REM Do this until %1 == -'FIXED_CTRL_C'
    CALL <NUL %0 -FIXED_CTRL_C %*
    GOTO EOF
 )
 echo.
-echo Starting trio-ircproxy.py in virtual-environment.
-echo While this window is open, the proxy server will
-echo be available and running. DO NOT share your port 
-echo numbers or IP address with anybody! Care has been 
-echo taken to NOT let this information leak to the public.
+echo Starting Trio-ircProxy.py in a virtual-environment.
+echo While this window is open, the proxy server will ofc
+echo be available and running. DO NOT share your server's
+echo port numbers or IP address nor passwords with anybody!
 echo.
 echo Calling ".\activate.bat" and executing "python.exe .\trio-ircproxy\trio-ircproxy.py"
 echo please wait...

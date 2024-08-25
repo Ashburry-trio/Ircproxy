@@ -51,20 +51,19 @@ def load_status() -> CF:
 
 
 class SystemData:
+    global xdccdir_path
+    global sysdir_path
     xdcc_chan_list: set[str] = set({})
     if not isdir(sysdir_path):
         mkdir(sysdir_path)
     if not isdir(xdccdir_path):
         mkdir(xdccdir_path)
-    xdccdir_path = xdccdir_path
-    sysdir_path = sysdir_path
     authfile_path: str = os.path.join(sysdir_path, "auth.ini")
     fryserverfile_path: str = os.path.join(_dir, 'settings', 'fryserver.ini')
     settingsfile_path: str = os.path.join(_dir, 'settings', 'bnc_settings.ini')
     user_settings_path: str = os.path.join(_dir, 'settings', 'user_settings.ini')
     loggedinfile_path: str = os.path.join(_dir, 'memory', 'logged_in.ini')
     nickhistoryfile_path: str = os.path.join(_dir, 'memory', "nicknames_history.ini")
-    xdcc_han_chat_file_path: str = os.path.join(xdccdir_path, "xdcc_chans_botsearch.ini")
     xdcc_chans_www_file_path: str = os.path.join(xdccdir_path, "xdcc_chans_list.ini")
     xbot_file_path: str = os.path.join(xdccdir_path, "xdcc_bots.ini")
     xdcc_chansfile_path: str = os.path.join(xdccdir_path, "xdcc_chans.ini")
