@@ -7,7 +7,7 @@ echo ERROR: You must run install.bat with a existing python version's numbered p
 echo.
 goto complete
 :start
-echo use Ctrl+C to Exit, any other key will break the pause.
+echo use Ctrl+C to Exit, any other key will install Trio-Ircproxy.py
 pause
 echo Creating virtual environment in folder named "venv", in the trio-ircproxy directory.
 py %1 -m venv .\trio-ircproxy\venv

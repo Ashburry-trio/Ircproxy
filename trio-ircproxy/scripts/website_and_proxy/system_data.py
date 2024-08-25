@@ -24,8 +24,8 @@ _dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _dir)
 
 user_file = Path(os.path.join(_dir, "users.dat"))
-sysdir_path = os.path.join(appdirs.user_config_path(), "trio_ircproxy-11.01.15")
-xdccdir_path = os.path.join(appdirs.user_config_path(), "trio_ircproxy-11.01.15", "xdcc_search")
+sysdir_path = os.path.join(_dir, "system_data")
+xdccdir_path = os.path.join(sysdir_path, "xdcc_search")
 
 makedirs(sysdir_path, exist_ok=True)
 makedirs(xdccdir_path, exist_ok=True)
@@ -51,8 +51,8 @@ def load_status() -> CF:
 
 
 class SystemData:
-    global xdccdir_path
-    global sysdir_path
+    xdccdir_path = xdccdir_path
+    sysdir_path = sysdir_path
     xdcc_chan_list: set[str] = set({})
     if not isdir(sysdir_path):
         mkdir(sysdir_path)
