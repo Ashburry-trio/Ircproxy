@@ -5,7 +5,7 @@ if "%~1"=="-FIXED_CTRL_C" (
    SHIFT
 ) ELSE (
    REM Run the batch with <NUL and -FIXED_CTRL_C
-   REM Do this until %1 == -'FIXED_CTRL_C'
+   REM the code below this line runs once
    CALL <NUL %0 -FIXED_CTRL_C %*
    GOTO EOF
 )
@@ -23,11 +23,11 @@ IF EXIST ".\activate.bat" (
     ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy-main\" (
         call "%UserProfile%\Documents\Ircproxy-main\activate.bat"
         goto end1
-    ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy\" (
-        call "%UserProfile%\Documents\Ircproxy\activate.bat"
-        goto end1
     ) ELSE IF EXIST "%UserProfile%\Ircproxy-main\" (
         call "%UserProfile%\Ircproxy-main\activate.bat"
+        goto end1
+    ) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy\" (
+        call "%UserProfile%\Documents\Ircproxy\activate.bat"
         goto end1
     ) ELSE IF EXIST "%UserProfile%\Ircproxy\" (
         call "%UserProfile%\Ircproxy\activate.bat"

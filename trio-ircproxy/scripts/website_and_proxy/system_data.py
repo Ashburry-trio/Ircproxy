@@ -51,8 +51,8 @@ def load_status() -> CF:
 
 
 class SystemData:
-    xdccdir_path = xdccdir_path
-    sysdir_path = sysdir_path
+    sysdir_path = os.path.join(_dir, "system_data")
+    xdccdir_path = os.path.join(sysdir_path, "xdcc_search")
     xdcc_chan_list: set[str] = set({})
     if not isdir(sysdir_path):
         mkdir(sysdir_path)
@@ -76,7 +76,7 @@ class SystemData:
 
     FryServer_ini: ConfigParser = ConfigParser()
     Settings_ini: ConfigParser = ConfigParser()
-    user_settings: dict[[str, dict[str,set[str]]]] = {}
+    user_settings: Dict[str, Dict[str, str]] = {}
     #  system_data.user_settings['by_username'][auth[0]]
 
     Nick_History_ini: Dict[str, Dict[str, str]] = dict()

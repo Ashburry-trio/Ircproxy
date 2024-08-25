@@ -600,12 +600,15 @@ def isme(client_socket, server, nick, target='') -> bool:
         return False
 catch_all = {}
 class UserCommands(object):
+    @classmethod
     async def user_PART(cls, client_socket, server, source, chan) -> bool:
         source_full = source
         if '!' in source:
             source = source.split('!')[0]
         source = source.lower()
         return False
+
+    @classmethod
     async def user_QUIT(cls, client_socket, source) -> bool:
         source_full = source
         if '!' in source:
@@ -614,6 +617,8 @@ class UserCommands(object):
         if '.script'+source in catch_all:
             del catch_all['.script'+source]
         return False
+
+    @classmethod
     async def user_NICK_change(cls, client_socket, source, target) -> bool:
         source_full = source
         if '!' in source:
@@ -624,6 +629,7 @@ class UserCommands(object):
             del catch_all['.script' + source]
         return False
 
+    @classmethod
     async def execute_user_command(cls, client_socket: trio.SocketStream | trio.SSLStream, server,
                                    source_nick, target_nick, cmd, parms) -> bool:
         """Execute a user command if it exists."""
