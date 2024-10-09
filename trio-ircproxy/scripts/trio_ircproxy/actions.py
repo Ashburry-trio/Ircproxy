@@ -47,6 +47,7 @@ async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = 
      :rtype: None
 
      """
+
     send_quit(sc_socket)
     return None
 
@@ -174,7 +175,7 @@ def quitmsg(msg: str = None, fto = None, client_socket: trio.SocketStream | trio
         # Send to client
         msg: str = ':' + socket_data.mynick[fto] + "!trio-ircproxy.py@www.myircproxyip.com " + msg
         send_all(client_socket, msg=msg)
-        print("MY NICK IS : " + socket_data.mynick[fto])
+        print("QUIT MY NICK IS : " + socket_data.mynick[fto])
         SocketData.clear_data(client_socket)
     return None
 
