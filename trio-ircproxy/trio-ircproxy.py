@@ -1161,7 +1161,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         await aclose_sockets(cs_before_connect)
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
         await trio.sleep(0)
-        raise EndSession('Client closed connection. Make sure your client is set to use Proxy not SOCKS.')
+        return None
     try:
 
         auth = False
@@ -1303,7 +1303,7 @@ async def start_proxy_listener():
 
             await quit_all()
             # raise
-            # print("EXC: " + str(exc.args))
+            print("EXC: " + str(exc.args))
         else:
             # raise
             pass
