@@ -819,9 +819,9 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
             return None
     elif split_line[0] == '005':
         sock_005(client_socket, original_line)
-    elif split_line[0] in ("001", "372", "005", "376", "375", "422"):
+    elif split_line[0] in ("372", "376", "375", "422"):
         socket_data.state[client_socket]['doing'] = 'signed on'
-        socket_data.mynick[client_socket] = split_line[2].lower()
+        socket_data.mynick[client_socket] = split_line[1].lower()
         socket_data.state[client_socket]['upper_nick'] = orig_upper_split[2]
         socket_data.set_face_nicknet(client_socket)
     elif split_line[0] == '301':
@@ -1158,7 +1158,6 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
                 continue
             break
     if cancel_scope.cancelled_caught:
-
         await aclose_sockets(cs_before_connect)
         socket_data.echo(cs_before_connect, "Client is too slow to send data. Socket closed.")
         await trio.sleep(0)
@@ -1207,13 +1206,10 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
             await before_connect_sent_connect(cs_before_connect, str_lines[0])
 
         except EndSession:
-
             pass
-    except Exception as e:
-
-        raise
+    except (Exception, ExceptionGroup) as e:
+        pass
     finally:
-
         await aclose_both(cs_before_connect)
 
 
@@ -1297,7 +1293,7 @@ async def start_proxy_listener():
             nursery.start_soon(trio.serve_tcp, identd_handler, 113)
             print('Started Identd server')
             print("press Ctrl+C to quit...\n")
-    except (EndSession,
+    except (EndSession, BaseException, BaseExceptionGroup,
             KeyboardInterrupt, OSError, trio.socket.gaierror,
             Exception, ExceptionGroup) as exc:
         if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):

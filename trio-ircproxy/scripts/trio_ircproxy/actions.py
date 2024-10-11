@@ -165,7 +165,7 @@ async def send_quit(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
 
 def quitmsg(msg: str = None, fto = None, client_socket: trio.SocketStream | trio.SSLStream = None) -> None:
     """The default quit message for the app"""
-    from ..website_and_proxy.socket_data import SocketData
+    from ..website_and_proxy.socket_data import SocketData as socket_data
     if not msg:
         # Send to server
         msg: str = "\x02Trio-IRCProxy.py\x02"
@@ -173,10 +173,9 @@ def quitmsg(msg: str = None, fto = None, client_socket: trio.SocketStream | trio
     send_all(socket_data.mysockets[client_socket], msg)
     if fto:
         # Send to client
-        msg: str = ':' + socket_data.mynick[fto] + "!trio-ircproxy.py@www.myircproxyip.com " + msg
+        msg: str = ':' + socket_data.mynick[fto] + "!trio-ircproxy.py@www.myproxyip.com " + msg
         send_all(client_socket, msg=msg)
-        print("QUIT MY NICK IS : " + socket_data.mynick[fto])
-        SocketData.clear_data(client_socket)
+        socket_data.clear_data(client_socket)
     return None
 
 def send_all(fto: list[trio.SocketStream | trio.SSLStream] | tuple[trio.SocketStream | trio.SSLStream] | trio.SocketStream | trio.SSLStream, msg: str) -> None:
