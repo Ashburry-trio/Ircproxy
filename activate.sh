@@ -1,6 +1,5 @@
-@echo off
-echo "You need to run the appropriate activate script for your shell."
-echo "I am trying source command for BornShell on activate.sh"
+#!/bin/bash
 chmod +x ./trio-ircproxy/venv/bin/activate.sh
+read -p "Press Enter to continue..."
 source ./trio-ircproxy/venv/bin/activate.sh
 

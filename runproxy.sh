@@ -1,15 +1,14 @@
-@echo off
-echo.
-echo "Starting Trio-ircProxy.py in a virtual-environment."
-echo "While this window is open, the proxy server will ofc"
-echo "be available and running. DO NOT share your server's"
-echo "port numbers or IP address nor passwords with anybody!"
-echo "-"
-chho "You must run this app while in the root directory of"
-echo "the Ircproxy project. Usually it is at /home/<username>/Ircproxy"
-echo.
-echo "Calling 'source ./activate.sh' and executing 'python ./trio-ircproxy/trio-ircproxy.py'"
-echo "please wait while the program loads..."
+#!/bin/bash
+echo "You must run this app while in the root directory of"
+echo "the Ircproxy project. It should be at /home/<username>/Ircproxy"
+echo -
+echo "Setting permissions..."
 chmod +x ./activate.sh
+chmod +x ./run.sh
+chmod +x ./runproxy.sh
+chmod +x ./install.sh
+read -p "Press Enter to continue..."
+echo "Activating the virtual-environment..."
 source ./activate.sh
+read -p "Press Enter to continue..."
 python ./trio-ircproxy/trio-ircproxy.py

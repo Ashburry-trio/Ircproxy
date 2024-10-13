@@ -1,27 +1,35 @@
-@echo off
-cls
-echo.
-set pythonversion=%1
-if defined pythonversion goto :start
-echo ERROR: You must run install.bat with a existing python versions numbered parameter. Example: "install.bat -3.19"
-echo.
-goto complete
-:start
-echo use Ctrl+C to Exit, any other key will break the pause.
-pause
-echo Creating virtual environment in folder named "venv", in the trio-ircproxy directory.
-py %1 -m venv .\trio-ircproxy\venv
+#!/bin/bash
+
+echo "Creating virtual environment in folder named venv, in the trio-ircproxy directory."
+python3 -m venv ./trio-ircproxy/venv
+
+# Change permissions for scripts
+echo "Setting execute permissions for scripts..."
 chmod +x ./activate.sh
+chmod +x ./runproxy.sh
+chmod +x ./run.sh
+chmod +x ./trio-ircproxy/venv/bin/activate.sh
+read -p "Press Enter to continue..."  # Wait for user input
+
+# Activate the virtual environment
+echo "Activating the virtual environment..."
 source ./activate.sh
-echo Install and upgrading both `wheel` and `pip`...
+read -p "Press Enter to continue..."  # Wait for user input
+
+# Upgrade pip and install wheel
+echo "Installing and upgrading both wheel and pip..."
 python -m pip --require-virtualenv install pip
 python -m pip --require-virtualenv install --upgrade pip
 pip --require-virtualenv install wheel
 python -m pip --require-virtualenv install --upgrade wheel
-echo Installing requirments via "pip install -r ./trio-ircproxy/requirements.txt"
+read -p "Press Enter to continue..."  # Wait for user input
+
+# Install requirements
+echo "Installing requirements..."
 pip --require-virtualenv install -r ./trio-ircproxy/requirements.txt
-echo.
+read -p "Press Enter to continue..."  # Wait for user input
+
+# Run the proxy script
+echo "Running the proxy script..."
 source ./runproxy.sh
-:complete
-pause
 
