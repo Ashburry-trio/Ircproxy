@@ -165,8 +165,8 @@ import unittest
 class UnitTesting(unittest.TestCase):
     def test_colourstrip_optimized(self):
         selftest_string = colourstrip_optimized("\x0312,MyProxyIP.com")
-        self.assertEqual(selftest_string, 'MyProxyIP.com')
-    
+        self.assertEqual(selftest_string, 'MyProxyIP.comAs')
+
 async def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream,
                             server_socket: trio.SSLStream | trio.SocketStream):
     socket_data.echo(client_socket, 'There was a exploit attempt by IRC server.')
