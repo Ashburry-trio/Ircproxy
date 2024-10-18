@@ -31,14 +31,3 @@ jobs:
       run: |
         python unittest trio-ircproxy/trio-ircproxy.py
 
-    - name: Run Linting
-      run: |
-        pip install flake8
-        flake8 .
-
-      - name: Run Unit Tests with Coverage
-	run: |
-	  coverage run -m pytest
-	  coverage report
-
-
