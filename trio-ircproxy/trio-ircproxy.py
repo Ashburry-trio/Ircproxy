@@ -128,7 +128,45 @@ def colourstrip(data: str) -> str:
     data = data.replace("\x1e", "")
     return data
 
+import re
 
+
+def colourstrip_optimized(data: str) -> str:
+    """
+    Removes all mIRC formatting and color codes from the text, including codes with optional attached numbers and commas,
+    while preserving standalone numbers.
+
+    @param data: str
+        A string of text that contains mIRC formatting codes.
+
+    @return:
+        The cleaned string with all formatting and color codes removed, while keeping standalone numbers.
+    """
+    import re
+
+    # Regex pattern to match mIRC color codes (\x03) with optional numbers and comma
+    # This matches \x03, \x0312, \x0312,34 but keeps commas if there's no following number
+    color_code_pattern = r'\x03(\d{1,2}(,\d{1,2})?)?'
+
+    # Control characters to be removed: bold (\x02), italics (\x1D), underline (\x1F), original format (\x0F),
+    #  got one extra not sure which one.                                     strikethrough (\x16), reverse (\x1E)
+    control_chars = ['\x03', '\x1E', '\x02', '\x1D', '\x1F', '\x0F', '\x16', '\x0E']
+
+    # Step 1: Remove color codes with the regex pattern
+    data = re.sub(color_code_pattern, '', data)
+
+    # Step 2: Remove other control characters
+    for char in control_chars:
+        data = data.replace(char, '')
+
+    return data
+
+import unittest
+class UnitTesting(unittest.TestCase):
+    def test_colourstrip_optimized(self):
+        selftest_string = colourstrip_optimized("\x0312,MyProxyIP.com")
+        self.assertEqual(selftest_string, 'MyProxyIP.com')
+    
 async def exploit_triggered(client_socket: trio.SSLStream | trio.SocketStream,
                             server_socket: trio.SSLStream | trio.SocketStream):
     socket_data.echo(client_socket, 'There was a exploit attempt by IRC server.')
@@ -187,10 +225,9 @@ def is_socket(xs: trio.SocketStream | trio.SSLStream) -> bool:
 
 async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """Close both irc-server and irc-client sockets together
-
-    :@param sc_socket: only one out of the two sockets is required. Can be normal or SSL, client-proxy or irc-server.
-    :@returns: None
-    :rtype: None
+    Vars:
+        @param sc_socket: only one out of the two sockets is required. Can be normal or SSL, client-proxy or irc-server.
+        @returns: None
 
     """
     await actions.send_quit(sc_socket)
@@ -198,14 +235,18 @@ async def aclose_both(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
 
 class EndSession(Exception):
     """
-    An BaseException to raise when paired sockets are closed.
+    An Exception to raise when paired sockets are closed.
     """
 
 def usable_decode(text: bytes | str) -> str:
     """Decode the text so it can be used.
         vars:
-            :@param text: a bytes-string that needs decoding
-            :@returns: the string of decoded bytes (str)
+            :@param text:
+                        bytes
+                            - a bytes-string that needs decoding
+            :@returns:
+                    str
+                       - the string of decoded bytes (str)
             :rtype: str
     """
     try:
@@ -319,12 +360,14 @@ async def proxy_make_irc_connection(client_socket: trio.SocketStream
         print('-')
         print("connections were closed. nursery finished.")
 
-async def make_normal_socket(client_socket, ss_hostname: str, port: int) -> trio.SocketStream | trio.SSLStream:
+async def make_normal_socket(client_socket, ss_hostname: str, port: int) -> trio.SocketStream | trio.SSLStream | None:
     """Setup normal socket
     """
+
     try:
-        server_socket: trio.SocketStream | trio.SSLStream = \
-            await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0.18)
+        server_socket: trio.SocketStream | trio.SSLStream | None= None
+        server_socket = await trio.open_tcp_stream(ss_hostname, port, happy_eyeballs_delay=0)  # type: ignore
+        print('Connected to IRC server ' + ss_hostname + ':' + str(port))
     except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
             trio.BusyResourceError, trio.socket.gaierror, OSError,
             ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
@@ -334,14 +377,14 @@ async def make_normal_socket(client_socket, ss_hostname: str, port: int) -> trio
                                        b"HTTP/1.0 502 Unable to connect to remote host.\x0c\n\x0c\n")
 
             await aclose_sockets(client_socket)
-            return
+            return None
         except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
                 trio.BusyResourceError, trio.socket.gaierror, OSError,
                 ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
                 ConnectionError):
 
             await aclose_sockets(client_socket)
-            return
+            return None
     return server_socket
 
 async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
@@ -350,12 +393,12 @@ async def make_SSL_socket(client_socket, ss_hostname: str, port: int):
     ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
     try:
-        server_socket: trio.SocketStream | trio.SSLStream = await trio.open_ssl_over_tcp_stream(
+        server_socket = await trio.open_ssl_over_tcp_stream(
             ss_hostname,
             port,
             https_compatible=False,
             ssl_context=ssl_context,
-            happy_eyeballs_delay=0.18)
+            happy_eyeballs_delay=0)
     except (trio.ClosedResourceError, trio.TrioInternalError, trio.BrokenResourceError,
             trio.BusyResourceError, trio.socket.gaierror, OSError,
             ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError,
@@ -469,10 +512,10 @@ async def script_command(client_socket, server, line):
          if await UserCommands.user_QUIT(client_socket, server, source) is True:
             return True
     if low_line[1] == 'nick':
-        if await UserCommands.user_NICK_change(client_socket, server, source, target) is True:
+        if await UserCommands.user_nick_change(client_socket, server, source, target) is True:
             return True
     if low_line[1] == 'part':
-         if await UserCommands.user_PART(client_socket, server, source, target) is True:
+        if await UserCommands.user_PART(client_socket, server, source, target) is True:
             return True
 
     if source and len(low_line) >= 4 and len(low_line[3]) >= 3 and low_line[1] == 'privmsg' and low_line[3][1] == '.':
@@ -535,7 +578,7 @@ class UserCommands(object):
         return False
 
     @classmethod
-    async def user_NICK_change(cls, client_socket, source, target) -> bool:
+    async def user_nick_change(cls, client_socket, source, target) -> bool:
         source_full = source
         if '!' in source:
             source = source.split('!')[0]
@@ -831,9 +874,8 @@ async def ss_received_line(client_socket: trio.SocketStream | trio.SSLStream,
               f" set away, reason: {reason}"
         actions.sc_send(client_socket, msg)
 
-
-    xdcc_Line: str = ' '.join(split_line)
-    if fnmatch(xdcc_Line, "#?* *?x [????] ????*"):
+    xdcc_line: str = ' '.join(split_line)
+    if fnmatch(xdcc_line, "#?* *?x [????] ????*"):
         pass
     actions.sc_send(client_socket, original_line)
     await trio.sleep(0)
@@ -940,9 +982,9 @@ def send_motd(client_socket: trio.SocketStream | trio.SSLStream, mynick: str) ->
     :returns: None
 
     """
-    prefix = ':'+WWW_SHORT_URL +' 375 ' + mynick + ' :- '
+    prefix = ':'+WWW_SHORT_URL + ' 375 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + WWW_SHORT_URL + '  Message of the Day -')
-    prefix = ':'+WWW_SHORT_URL +' 372 ' + mynick + ' :- '
+    prefix = ':'+WWW_SHORT_URL + ' 372 ' + mynick + ' :- '
     actions.sc_send(client_socket, prefix + '\x02'+WWW_SHORT_URL+' MOTD\x02 -')
     actions.sc_send(client_socket, prefix)
     actions.sc_send(client_socket, prefix + 'To connect to a SSL port, '
@@ -1012,7 +1054,7 @@ def cs_rcvd_command(client_socket: trio.SocketStream | trio.SSLStream,
 def check_fry_server(ip_addy: tuple | list | str) -> bool:
     """Makes sure the server is not being hammered
     by a specific IP address. Checks after 20 connections.
-    If you plan on using the Proxy Server in a hammering fasion
+    If you plan on using the Proxy Server in a hammering fashion
     you can add an IP to the immune list see "/raw proxy-help immune"
 
     :@param ip_addy: a tuple, list or string of an IP address
@@ -1103,7 +1145,7 @@ def verify_login(auth_userlogin: str) -> bool | tuple[str, str]:
         if auth_login.count(":") > 1 or auth_login.count(':') < 1 or auth_login.count(" ") > 0 \
                 or verify_user_pwdfile(auth_user, auth_pass) is False:
             return False
-        return (auth_user, auth_pass)
+        return auth_user, auth_pass
     except ValueError:
         return False
     finally:
@@ -1136,8 +1178,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         print('socket closed due to invalid hostname')
         await cs_before_connect.aclose()
         return
-    if not (check_fry_server):
-
+    if not check_fry_server:
         await aclose_sockets(cs_before_connect)
         print(':::::: FRY_SERVER TRIGGERED ::::::')
         return None
@@ -1212,7 +1253,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     finally:
         await aclose_both(cs_before_connect)
 
-
+from markupsafe import escape
 async def before_connect_sent_connect(cs_sent_connect: trio.SocketStream
                                                        | trio.SSLStream, byte_string: str) -> None:
     """The socket is in a state where the client has just sent the CONNECT
@@ -1296,16 +1337,18 @@ async def start_proxy_listener():
     except (EndSession, BaseException, BaseExceptionGroup,
             KeyboardInterrupt, OSError, trio.socket.gaierror,
             Exception, ExceptionGroup) as exc:
-        if len(exc.args) > 1 and (exc.args[0] == 98 or exc.args[0] == 10048):
-            print(
-                '\nERROR: the listening port is being used somewhere else. '
-                + 'maybe trio-ircproxy.py is already running somewhere?')
+        if len(exc.args) > 1 and ('98' in str(exc.args[0]) or exc.args[0] == 10048) or \
+                (len(exc.args) >= 2 and len(exc.args[1]) > 0) and ('98' in str(exc.args[1][0]) or
+                                                                    '10048' in str(exc.args[1][0])):
+            print('\nERROR: the listening port is being used somewhere else. '
+                + '\nMaybe trio-ircproxy.py is already running somewhere? Open your browser to '
+                + '\n\"http://www.myproxyip.com/config/status.html\".')
 
             await quit_all()
             # raise
-            print("EXC: " + str(exc.args))
+            # print("EXC: " + str(exc.args))
         else:
-            # raise
+           # print("EXC else: " + str(exc.args[1][0]))
             pass
     print("\nTrio-ircproxy.py has Quit! -- good-bye bear ʕ•ᴥ•ʔ\n")
     try:
@@ -1325,7 +1368,7 @@ async def quit_all() -> None:
         try:
 
             await actions.send_quit(sock)
-        except:
+        except (Exception, ExceptionGroup):
             continue
     return None
 
@@ -1334,11 +1377,14 @@ def begin_server() -> None:
     """Start the trio_ircproxy.py proxy server
 
     """
+    import dis
+    # dis.dis(start_proxy_listener)
     system_data.make_settings()
     system_data.make_fryfile()
     system_data.make_nickhistory()
     system_data.make_xdcc_chan_chat()
     trio.run(start_proxy_listener)
+
     return None
 
 

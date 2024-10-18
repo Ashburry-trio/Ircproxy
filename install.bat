@@ -3,7 +3,7 @@ cls
 echo.
 set pythonversion=%1
 if defined pythonversion goto :start
-echo ERROR: You must run install.bat with a existing python version's numbered parameter. Example: "install.bat -3.19"
+echo ERROR: You must run install.bat with a existing python version's numbered parameter. Example: "install.bat -3.12"
 echo.
 goto complete
 :start
@@ -15,10 +15,10 @@ call .\activate.bat
 echo Install and upgrading both `wheel` and `pip`...
 python.exe -m pip --require-virtualenv install pip
 python.exe -m pip --require-virtualenv install --upgrade pip
-pip.exe --require-virtualenv install wheel
+python.exe -m pip --require-virtualenv install wheel
 python.exe -m pip --require-virtualenv install --upgrade wheel
-echo Installing requirments via "pip install -r .\trio-ircproxy\requirements.txt"
-pip.exe --require-virtualenv install -r .\trio-ircproxy\requirements.txt
+echo Installing requirments...
+python.exe -m pip --require-virtualenv install -r .\trio-ircproxy\requirements.txt
 echo.
 call runproxy.bat
 :complete

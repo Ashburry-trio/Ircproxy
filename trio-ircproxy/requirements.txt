@@ -1,3 +1,4 @@
+markupsafe>=3.0.1
 git+https://github.com/python-trio/trio.git
 git+https://github.com/python-validators/validators
 git+https://github.com/DiffSK/configobj
