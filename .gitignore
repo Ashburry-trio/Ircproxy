@@ -12,7 +12,7 @@
 *.backup
 # enormous .git directory
 .git*
-.github*
+!.github*
 # enormous dump files
 *.DMP
 *secrets.ini
