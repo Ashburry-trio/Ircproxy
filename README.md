@@ -1,11 +1,18 @@
 **Trio-ircproxy.py** 
 =====================
 
-### \- an proxy/bounce server for your IRC client. Copyright (c) 2024, *master sire g.i. Kenggi J.P. PhD. ret.*
+### \- an proxy/bounce server for your IRC client. Copyright (c) 2024, *master sire g.i. Kenggi J.P. phD. ret.*
 
 This is a work in progress, if you wish to help then write issues for all and
 any requests. The issues is working as a to-do list of features as well as a
 communication channel.
+
+I am looking for a Canadian server, possibly my own laptop to host the
+download for Trio-ircproxy.py. This is because of the cryptography that
+that the application uses may not be allowed for use outside of the
+Unitied States. However, my home country, Canada, has no such restrictions.
+Just make sure you download the application from a server in Canada
+unless, you live in the U.S. then you can download from anywhere.
 
 Issues (requests) List :
 **https://github.com/ashburry-trio/Ircproxy/issues**
