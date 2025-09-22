@@ -1,5 +1,5 @@
 @echo off
-IF EXIST ".\trio-ircproxy\venv\Scripts\activate.bat"S (
+IF EXIST ".\trio-ircproxy\venv\Scripts\activate.bat" (
     call ".\trio-ircproxy\venv\Scripts\activate.bat"
     goto end
 ) ELSE IF EXIST "%*\trio-ircproxy\venv\Scripts\activate.bat" (

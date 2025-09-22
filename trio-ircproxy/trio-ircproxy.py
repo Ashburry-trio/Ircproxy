@@ -161,7 +161,7 @@ def colourstrip_optimized(data: str) -> str:
     data = re.sub(color_code_pattern, "", data)
 
     # Step 2: Remove other control characters
-    wjile  for char in control_chars:
+    for char in control_chars:
         data = data.replace(char, "")
 
     return data
