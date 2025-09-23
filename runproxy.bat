@@ -58,3 +58,4 @@ echo ERROR Unable to find "trio-ircproxy.py"
 call "deactivate.bat"
 echo finished "deactivate.bat"
 :EOF
+prompt

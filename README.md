@@ -23,17 +23,20 @@ with *https://www.myproxyip.com/*.
 
 If you wish to run the application, maybe just to see if it is still working
 then follow the instructions below. If you are using Linux it is assumed you
-know how to run the app from these Windows only instructions:
+know how to run the app from these Windows instructions:
+
+-   Install the latest version of *Git*
 
 -   open **cmd.exe** by *right clicking* on the **Windows Start Menu** button
     (and choose **run**)
 
--   type in the input box **cmd.exe** and press **Enter**
+-   type in the input box type **cmd.exe** and press **Enter**
 
 -   Type **cd Documents** then **git clone https://github.com/Ashburry-trio/Ircproxy**
 
--   type **install.bat -3.13** the *-3.12* is the *Python version* you have
-    installed. Install the latest version and use **py --version** to see your
+-   type **install.bat -3.13** the *-3.13* is the *Python version* you have
+    installed. Do not put the third digit for your linux version, just the first two numbers.
+    Install the latest version and use **py --version** to see your
     installed python versions.
 
 -   Then you just need to execute **run.bat** on the command line
@@ -49,8 +52,8 @@ eval "$(pyenv virtualenv-init -)" && \
 pyenv install $(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -1) && \
 pyenv global $(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -1)
 
--    If you get an error with the code above then ask chatgpt *"How do I install the latest 
-     version of Python along side my Linux systems default Python installation"*
+-    If you get an error with the code above then ask chatgpt **"How do I install the latest 
+     version of Python along side my Linux system's default Python installation"**
 
 If you are using Linux then you need to install manually; this is done with:
 
