@@ -10,15 +10,15 @@ communication channel.
 I am looking for a Canadian server, possibly my own laptop to host the
 download for Trio-ircproxy.py. This is because of the cryptography that
 that the application uses may not be allowed for use outside of the
-Unitied States. However, my home country, Canada, has no such restrictions.
+United States. However, my home country, Canada, has no such restrictions.
 Just make sure you download the application from a server in Canada
 unless, you live in the U.S. then you can download from anywhere.
 
 Issues (requests) List :
 **https://github.com/ashburry-trio/Ircproxy/issues**
 
-This application is not meant to be run by a user, instead I will rent a VPS to
-host the application with on a few dozen IP addresses and it will be networked
+This application is not meant to be run by a user; instead I will rent a VPS to
+host the application on several dozen IP addresses and it will be networked
 with *https://www.myproxyip.com/*.
 
 If you wish to run the application, maybe just to see if it is still working
@@ -32,14 +32,14 @@ know how to run the app from these Windows instructions:
 
 -   type in the input box type **cmd.exe** and press **Enter**
 
--   Type **cd Documents** then **git clone https://github.com/Ashburry-trio/Ircproxy**
+-   Type **cd %userprofile%** then **git clone https://github.com/Ashburry-trio/Ircproxy.git**
 
 -   type **install.bat -3.13** the *-3.13* is the *Python version* you have
-    installed. Do not put the third digit for your linux version, just the first two numbers.
+    installed. Do not put the third digit for your python version, just the first two numbers.
     Install the latest version and use **py --version** to see your
     installed python versions.
 
--   Then you just need to execute **run.bat** on the command line
+-   Then you just need to execute **runproxy.bat -3.13** on the command line (install.bat runs runproxy.bat)
 
 -   If you are using *Linux* do not update your systems version of Python, instead
     install the latest version of Python alongside your system version via the
@@ -56,6 +56,7 @@ pyenv global $(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -1
      version of Python along side my Linux system's default Python installation"**
 
 If you are using Linux then you need to install manually; this is done with:
+Notice how the command below uses ~/Documents instead of just ~/Ircproxy/:
 
 **python -m venv ~/Documents/Ircproxy/trio-ircproxy/venv** then look in **~/Documents/Ircproxy/trio-ircproxy/venv/bin** 
 for the **activate** script compatible with your Linux terminal:
