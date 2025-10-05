@@ -3,14 +3,14 @@ cls
 echo.
 set pythonversion=%1
 if defined pythonversion goto :start
-echo ERROR: You must run install.bat with a existing python version's numbered parameter. Example: "install.bat -3.12"
+echo ERROR: You must run install.bat with a existing python.exe: "install.bat python3.13"
 echo.
 goto complete
 :start
-echo use Ctrl+C to Exit, any other key will install Trio-Ircproxy.py
+echo use Ctrl+C to EXIT, any other key will INSTALL and RUN Trio-Ircproxy.py
 pause
 echo Creating virtual environment in folder named "venv", in the trio-ircproxy directory.
-py %1 -m venv .\trio-ircproxy\venv
+%1 -m venv .\trio-ircproxy\venv
 call .\activate.bat
 echo Install and upgrading both `wheel` and `pip`...
 python.exe -m pip --require-virtualenv install pip

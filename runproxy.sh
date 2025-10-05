@@ -7,8 +7,7 @@ chmod +x ./activate.sh
 chmod +x ./run.sh
 chmod +x ./runproxy.sh
 chmod +x ./install.sh
-read -p "Press Enter to continue..."
 echo "Activating the virtual-environment..."
 source ./activate.sh
-read -p "Press Enter to continue..."
+echo "Executing ./trio-ircproxy/trio-ircproxy.py You must run 'source install.sh'"
 python ./trio-ircproxy/trio-ircproxy.py

@@ -1,24 +1,10 @@
 @echo off
-IF EXIST ".\trio-ircproxy\venv\Scripts\activate.bat" (
-    call ".\trio-ircproxy\venv\Scripts\activate.bat"
+
+IF EXIST "%UserProfile%\Ircproxy\trio-ircproxy\venv\Scripts\activate.bat" (
+    call "%UserProfile%\Ircproxy\trio-ircproxy\venv\Scripts\activate.bat"
     goto end
-) ELSE IF EXIST "%*\trio-ircproxy\venv\Scripts\activate.bat" (
-        call "%*\trio-ircproxy\venv\Scripts\activate.bat"
-        goto end
-) ELSE IF EXIST "%UserProfile%\Ircproxy\trio-ircproxy\" (
-        call "%UserProfile%\Ircproxy\trio-ircproxy\venv\Scripts\activate.bat"
-        goto end
-) ELSE IF EXIST "%UserProfile%\Ircproxy-main\trio-ircproxy\" (
-        call "%UserProfile%\Ircproxy-main\trio-ircproxy\venv\Scripts\activate.bat"
-        goto end
-) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy\trio-ircproxy\" (
-        call "%UserProfile%\Documents\Ircproxy\trio-ircproxy\venv\Scripts\activate.bat"
-        goto end
-) ELSE IF EXIST "%UserProfile%\Documents\Ircproxy-main\trio-ircproxy\" (
-        call "%UserProfile%\Documents\Ircproxy-main\trio-ircproxy\venv\Scripts\activate.bat"
-        goto end
 )
-echo ERROR: Run activate.bat while inside the "Ircproxy" root directory.
+echo ERROR: "install.bat" must first be run from "%UserProfile%\Ircproxy\install.bat" after you may execute "runproxy.bat"
 goto EOF
 :end
 PROMPT=(trio-ircproxy) %_OLD_VIRTUAL_PROMPT%

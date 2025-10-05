@@ -69,14 +69,21 @@ import sys
 import os
 
 # from cryptography.fernet import Fernet
+from pathlib import Path
 _dir = path.dirname(path.abspath(__file__))
+home_dir = Path.home() / "Ircproxy" / "trio-ircproxy"
+home_dir = str(home_dir)
+if _dir != home_dir:
+    print("ERROR: Your Ircproxy folder must be in your home directory.")
+    print("Exactly like: "+home_dir)
+    exit()
 chdir(realpath(dirname(expanduser(argv[0]))))
 
 VERSION_NUM = "3.0.1"
 WWW_SHORT_URL = "www.MyProxyIP.com"
 WWW_LONG_URL = "https://wwww.MyProxyIP.com/"
 NAKED_URL = "MyProxyIP.com"
-
+PA_URL = "https://ashburry.pythonanywhere.com"
 
 def colourstrip(data: str) -> str:
     """Strips the mIRC colour codes from the text in data
