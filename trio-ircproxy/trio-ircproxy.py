@@ -61,6 +61,7 @@ from scripts.website_and_proxy.users import validate_login, verify_user_pwdfile
 # from sys import exc_info
 # from socket import gaierror
 # from socket import error
+from markupsafe import escape
 from sys import argv
 from time import time as ctime
 from typing import Deque, Any, Coroutine
@@ -74,6 +75,8 @@ _dir = path.dirname(path.abspath(__file__))
 home_dir = Path.home() / "Ircproxy" / "trio-ircproxy"
 home_dir = str(home_dir)
 if _dir != home_dir:
+    home_dir = Path.home() / "Ircproxy"
+    home_dir = str(home_dir)
     print("ERROR: Your Ircproxy folder must be in your home directory.")
     print("Exactly like: "+home_dir)
     exit()
@@ -188,6 +191,7 @@ async def exploit_triggered(
     client_socket: trio.SSLStream | trio.SocketStream,
     server_socket: trio.SSLStream | trio.SocketStream,
 ):
+    # ERROR: Write to client DCC Chat and Privmsg
     socket_data.echo(client_socket, "There was a exploit attempt by IRC server.")
     await actions.send_quit(server_socket)
 
@@ -1492,9 +1496,6 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
         pass
     finally:
         await aclose_both(cs_before_connect)
-
-
-from markupsafe import escape
 
 
 async def before_connect_sent_connect(
