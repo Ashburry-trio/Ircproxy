@@ -1,0 +1,22 @@
+name: Run Trio-Ircproxy
+
+on: [push, pull_request]
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f trio-ircproxy\requirements.txt ]; then pip install -r trio-ircproxy\requirements.txt; fi
+
+      - name: Run Trio-Ircproxy.py
+        run: python trio-ircproxy\trio-ircproxy.py
