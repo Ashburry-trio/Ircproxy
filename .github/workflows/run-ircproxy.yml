@@ -18,6 +18,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r trio-ircproxy/requirements.txt
 
+      - name: Debug repo contents
+	  run: ls -R
+
       - name: Run Trio-Ircproxy.py
         run: python Ircproxy/trio-ircproxy/trio-ircproxy.py
 
