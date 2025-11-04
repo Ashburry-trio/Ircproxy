@@ -19,7 +19,7 @@ jobs:
           pip install -r trio-ircproxy/requirements.txt
 
       - name: Run Trio-Ircproxy.py
-        run: python trio-ircproxy/trio-ircproxy.py
+        run: python Ircproxy/trio-ircproxy/trio-ircproxy.py
 
 	- name: Cache pip
 	  uses: actions/cache@v4
