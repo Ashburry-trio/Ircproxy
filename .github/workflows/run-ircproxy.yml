@@ -21,14 +21,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r trio-ircproxy/requirements.txt
 
-      - name: Run Trio-Ircproxy.py
+      - name: Run trio-ircproxy.py
         run: python Ircproxy/trio-ircproxy/trio-ircproxy.py
 
-	- name: Cache pip
-	  uses: actions/cache@v4
-	  with:
-	    path: ~/.cache/pip
-	    key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-	    restore-keys: |
-	      ${{ runner.os }}-pip-
+      - name: Cache pip
+	uses: actions/cache@v4
+	with:
+	  path: ~/.cache/pip
+	  key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+	  restore-keys: |
+	    ${{ runner.os }}-pip-
 
