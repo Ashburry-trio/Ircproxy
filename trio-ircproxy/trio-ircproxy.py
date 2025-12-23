@@ -74,12 +74,12 @@ from pathlib import Path
 _dir = path.dirname(path.abspath(__file__))
 home_dir = Path.home() / "Ircproxy" / "trio-ircproxy"
 home_dir = str(home_dir)
-if _dir != home_dir:
-    home_dir = Path.home() / "Ircproxy"
-    home_dir = str(home_dir)
-    print("ERROR: Your Ircproxy folder must be in your home directory.")
-    print("Exactly like: "+home_dir)
-    exit()
+# if _dir != home_dir:
+#     home_dir = Path.home() / "Ircproxy"
+#     home_dir = str(home_dir)
+#     print("ERROR: Your Ircproxy folder must be in your home directory.")
+#     print("Exactly like: "+home_dir)
+#     exit()
 chdir(realpath(dirname(expanduser(argv[0]))))
 
 VERSION_NUM = "3.0.1"
@@ -1562,10 +1562,10 @@ async def start_proxy_listener():
     listen_ports = (
         listen_ports.replace(",", " ")
         .replace(";", " ")
-        .replace("  ", " ")
         .replace("*", "")
         .replace("+", "")
         .replace("\t", " ")
+        .replace("  ", " ")
         .strip()
     )
     while "  " in listen_ports:
@@ -1584,6 +1584,7 @@ async def start_proxy_listener():
             nursery.start_soon(trio.serve_tcp, identd_handler, 113)
             print("Started Identd server")
             print("press Ctrl+C to quit...\n")
+
     except (
         EndSession,
         BaseException,
@@ -1604,6 +1605,8 @@ async def start_proxy_listener():
                 "\nERROR: the listening port is being used somewhere else. "
                 + "\nMaybe trio-ircproxy.py is already running somewhere? Open your browser to "
                 + '\n"http://www.myproxyip.com/config/status.html".'
+                + "\nYour identd server port (113) may already be in use! Perhaps you have an IRC client running."
+
             )
 
             await quit_all()

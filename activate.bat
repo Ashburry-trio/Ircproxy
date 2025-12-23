@@ -1,7 +1,7 @@
 @echo off
 
-IF EXIST "%UserProfile%\Ircproxy\trio-ircproxy\venv\Scripts\activate.bat" (
-    call "%UserProfile%\Ircproxy\trio-ircproxy\venv\Scripts\activate.bat"
+IF EXIST ".\trio-ircproxy\venv\Scripts\activate.bat" (
+    call ".\trio-ircproxy\venv\Scripts\activate.bat"
     goto end
 )
 echo ERROR: "install.bat" must first be run from "%UserProfile%\Ircproxy\install.bat" after you may execute "runproxy.bat"

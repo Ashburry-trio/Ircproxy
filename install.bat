@@ -13,10 +13,7 @@ echo Creating virtual environment in folder named "venv", in the trio-ircproxy d
 %1 -m venv .\trio-ircproxy\venv
 call .\activate.bat
 echo Install and upgrading both `wheel` and `pip`...
-python.exe -m pip --require-virtualenv install pip
-python.exe -m pip --require-virtualenv install --upgrade pip
-python.exe -m pip --require-virtualenv install wheel
-python.exe -m pip --require-virtualenv install --upgrade wheel
+python.exe -m pip --require-virtualenv install --upgrade pip wheel setuptools
 echo Installing requirments...
 python.exe -m pip --require-virtualenv install -r .\trio-ircproxy\requirements.txt
 echo.
