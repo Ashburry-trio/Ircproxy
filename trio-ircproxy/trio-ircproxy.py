@@ -1605,7 +1605,7 @@ async def start_proxy_listener():
                 "\nERROR: the listening port is being used somewhere else. "
                 + "\nMaybe trio-ircproxy.py is already running somewhere? Open your browser to "
                 + '\n"http://www.myproxyip.com/config/status.html".'
-                + "\nYour identd server port (113) may already be in use! Perhaps you have an IRC client running."
+                + "\n\nYour identd server port (113) may already be in use! Perhaps you have an IRC client running."
 
             )
 
