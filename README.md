@@ -32,14 +32,11 @@ know how to run the app from these Windows instructions:
 
 -   type in the input box type **cmd.exe** and press **Enter**
 
--   Type **cd %userprofile%** then **git clone https://github.com/Ashburry-trio/Ircproxy.git**
+-   Type **cd %userprofile%** then **mkdir Projects** then **mkdir Ircproxy** then **cd Projects\Ircproxy** then **git clone https://github.com/Ashburry-trio/Ircproxy.git**
 
--   type **install.bat -3.13** the *-3.13* is the *Python version* you have
-    installed. Do not put the third digit for your python version, just the first two numbers.
-    Install the latest version and use **py --version** to see your
-    installed python versions.
+-   type **install.bat python3.13** 
 
--   Then you just need to execute **runproxy.bat -3.13** on the command line (install.bat runs runproxy.bat)
+-   Then you just need to execute **runproxy.bat** on the command line (install.bat runs runproxy.bat)
 
 -   If you are using *Linux* do not update your systems version of Python, instead
     install the latest version of Python alongside your system version via the
@@ -91,7 +88,8 @@ PowerShell
 You will need to *activate* the the venv everytime
 you run the *trio-ircproxy.py* app. After you have activated the venv type **python
 ~Documents/Ircproxy/trio-ircproxy/trio-ircproxy.py** to run the app. Don’t forget to install the
-*requirements.txt* with **pip3 install -r ~Documents/Ircproxy/trio-ircproxy/requirements.txt** (just once each upgrade).
+*requirements.txt* with **pip3 install -r ~Documents/Ircproxy/trio-ircproxy/requirements.txt** (just once each upgrade) 
+from within the virtualenv.
 
 Copyright License
 =================

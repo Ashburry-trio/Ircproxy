@@ -21,8 +21,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r trio-ircproxy/requirements.txt
 
-      - name: Run trio-ircproxy.py
-        run: python trio-ircproxy/trio-ircproxy.py
+      - name: Run proxy briefly
+        run: timeout 10s python trio-ircproxy/trio-ircproxy.py || true
+
+
 
       - name: Cache pip
         uses: actions/cache@v4

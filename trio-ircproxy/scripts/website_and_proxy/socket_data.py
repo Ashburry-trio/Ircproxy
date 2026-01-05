@@ -16,16 +16,16 @@ system_data.load_settings()
 
 
 # Duplicated in ..trio_ircproxy.actions.yes_no()
-def yes_no(msg: str = '') -> int:
+def yes_no(msg: str = ''):
     if not msg:
-        return 0
+        return False
     msg = str(msg).lower()
     if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
-            or msg == 'true' or msg == 'allow' or msg == 'sure' or msg == 'fine'\
-            or msg.startswith('affirm') or msg == 'mhmm' or msg == '*':
-        return 1
+            or msg.contains('true') or msg == 'allow' or msg == 'sure' or msg == 'fine'\
+            or msg.startswith('affirm') or msg == '*' or msg == 'active' or msg.startswith('enable'):
+        return True
     else:
-        return 0
+        return False
 
 
 async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = None) -> None:

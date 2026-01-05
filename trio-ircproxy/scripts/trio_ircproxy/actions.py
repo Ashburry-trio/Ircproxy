@@ -16,8 +16,8 @@ def yes_no(msg: str = ''):
         return False
     msg = str(msg).lower()
     if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
-            or msg == 'true' or msg == 'allow' or msg == 'sure' or msg == 'fine'\
-            or msg.startswith('affirm') or msg == '*':
+            or msg.contains('true') or msg == 'allow' or msg == 'sure' or msg == 'fine'\
+            or msg.startswith('affirm') or msg == '*' or msg == 'active' or msg.startswith('enable'):
         return True
     else:
         return False
@@ -79,7 +79,7 @@ def ss_version_reply(nick) -> str:
             "NOTICE "
             + nick
             + f" :\x01VERSION \x02Trio-ircproxy.py\x02 {VERSION_NUM} from "
-            + "\x1fhttps://www.mslscript.com\x1f\x01"
+            + "\x1fhttps://www.MyProxyIP.com\x1f\x01"
     )
 
 
@@ -188,17 +188,17 @@ def send_all(fto: list[trio.SocketStream | trio.SSLStream] | tuple[trio.SocketSt
 
 
 def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
-    """Send a server notice to the irc-client
+    """Send a privmsg to the irc-client
     vars:
         :@param client_socket: the socket to the irc-client
         :@param msg: the text message words to send to the irc-client
         :@return: None
 
     """
-    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+    if (not isinstance(client_socket, trio.SocketStream) and not isinstance(client_socket, trio.SSLStream)) \
             or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
         return None
-    msg = ":*mg-script!trio-ircproxy@www.myircproxyip.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
+    msg = ":*Status!trio-ircproxy.py@www.MyProxyIP.com PRIVMSG " + socket_data.mynick[client_socket] + " :" + msg
     sc_send(client_socket, msg)
     return None
 
@@ -248,18 +248,10 @@ def cs_send_notice(client_socket: trio.SocketStream | trio.SSLStream, nick: str,
         :@return: None
 
     """
-    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
+    if (not isinstance(client_socket, trio.SocketStream) and not isinstance(client_socket, trio.SSLStream)) \
             or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
         return None
     msg = f":*mg-script!trio-ircproxy@www.myircproxyip.com NOTICE {nick} :{msg}"
     sc_send(client_socket, msg)
     return None
 
-def msg_to_client(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> None:
-    if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
-            or not msg or (not isinstance(msg, str) and not not isinstance(msg, bytes)):
-        return None
-    msg = "*status!msg-script@www.myircproxyip.com + privmsg" \
-          + socket_data.mynick[client_socket] + " :" + msg
-    sc_send(client_socket, msg)
-    return None

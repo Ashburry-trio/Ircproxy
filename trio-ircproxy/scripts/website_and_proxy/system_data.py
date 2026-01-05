@@ -43,9 +43,9 @@ def load_status() -> CF:
     config = CF()
     config.read('status.ini')
     if not config["status"]['name'].startswith('*'):
-        config['status']['name'] = '*PROXY'
+        config['status']['name'] = '*Status'
     if not config["status"]['fullname'].startswith(config['status']['name']) or not fnmatch(config["status"]['fullname'],"?*!?*@?*.?*" ):
-        config['status']['fullname'] = config['status']['name'] + "!Bauderr@www.MyProxyIP.com"
+        config['status']['fullname'] = config['status']['name'] + "!trio-ircproxy.py@www.MyProxyIP.com"
     config_save(config, 'status.ini')
     return config
 
