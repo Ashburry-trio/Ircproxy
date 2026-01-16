@@ -26,7 +26,7 @@ def generate_key():
     Generates a key and save it into a file
     """
     key = Fernet.generate_key()
-    with open(key_file, "wb") as key_filer:
+    with open(key_file, "wb") as key_file:
         key_filer.write(key)
 
 

@@ -203,7 +203,7 @@ def cs_send_msg(client_socket: trio.SocketStream | trio.SSLStream, msg: str) -> 
     return None
 
 
-def ss_send_msg(server_socket: trio.SocketStream | trio.SSLStream, nick: str, msg: str) -> None:
+def ss_send_msg(server_socket: trio.SocketStream | trio.SSLStream, target: str, msg: str) -> None:
     """Send an msg to the nickname
     vars:
         :@param server_socket: the socket to the irc-server
@@ -213,14 +213,14 @@ def ss_send_msg(server_socket: trio.SocketStream | trio.SSLStream, nick: str, ms
 
     """
     if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
-            or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
+            or not msg or not target or not isinstance(nick, str) or not isinstance(msg, str):
         return
-    msg = "PRIVMSG " + nick + " :" + msg
+    msg = "PRIVMSG " + target + " :" + msg
     sc_send(server_socket, msg)
     return None
 
 
-def ss_send_notice(server_socket: trio.SocketStream | trio.SSLStream, nick: str, msg: str) -> None:
+def ss_send_notice(server_socket: trio.SocketStream | trio.SSLStream, targetnic: str, msg: str) -> None:
     """Send an notice to the nickname
     Vars:
         :@param server_socket: the socket to the irc-server
@@ -230,9 +230,9 @@ def ss_send_notice(server_socket: trio.SocketStream | trio.SSLStream, nick: str,
 
     """
     if (not isinstance(server_socket, trio.SocketStream) and not isinstance(server_socket, trio.SSLStream)) \
-            or not msg or not nick or not isinstance(nick, str) or not isinstance(msg, str):
+            or not msg or not target or not isinstance(nick, str) or not isinstance(msg, str):
         return None
-    msg = f"NOTICE {nick} :{msg}"
+    msg = f"NOTICE {target} :{msg}"
     sc_send(server_socket, msg)
     return None
 
