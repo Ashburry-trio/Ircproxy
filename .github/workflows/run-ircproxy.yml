@@ -22,7 +22,7 @@ jobs:
           pip install -r trio-ircproxy/requirements.txt
 
       - name: Run proxy briefly
-        run: timeout 10s python trio-ircproxy/trio-ircproxy.py || true
+        run: timeout 60s python trio-ircproxy/trio-ircproxy.py || true
 
 
 
