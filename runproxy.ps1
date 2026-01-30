@@ -35,10 +35,11 @@ IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (
         python.exe "%UserProfile%\Ircproxy\trio-ircproxy\trio-ircproxy.py"
         goto done
 )
-echo ERROR Unable to find "%USERPROFILE%\trio-ircproxy\trio-ircproxy.py"
+echo ERROR Unable to find "%USERPROFILE%\Ircproxy\trio-ircproxy\trio-ircproxy.py"
 :done
 call "deactivate.bat"
 echo finished "deactivate.bat"
 :EOF
 
 prompt
+
