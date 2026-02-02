@@ -2,42 +2,57 @@
 # -*- coding: utf-8 -*-F
 from __future__ import annotations
 
-import trio
-from trio import SocketStream, SSLStream
-from time import time
-from random import randint
 from collections import deque
-from typing import Dict, Deque, Set, Union
-from system_data import SystemData as system_data
-from fnmatch import fnmatch
+from random import randint
 from socket import gaierror
+from time import time
+from typing import Deque, Dict, Set
+
+import trio
+from system_data import SystemData as system_data
+
+from ..trio_ircproxy import actions
 
 system_data.load_settings()
 
 
 # Duplicated in ..trio_ircproxy.actions.yes_no()
-def yes_no(msg: str = ''):
+def yes_no(msg: str = ""):
     if not msg:
         return False
     msg = str(msg).lower()
-    if msg.startswith('y') or msg.startswith('ok') or msg == '1' or msg == 'on'\
-            or msg.contains('true') or msg == 'allow' or msg == 'sure' or msg == 'fine'\
-            or msg.startswith('affirm') or msg == '*' or msg == 'active' or msg.startswith('enable'):
+    if (
+        msg.startswith("y")
+        or msg.startswith("ok")
+        or msg == "1"
+        or msg == "on"
+        or msg.contains("true")
+        or msg == "allow"
+        or msg == "sure"
+        or msg == "fine"
+        or msg.startswith("affirm")
+        or msg == "*"
+        or msg == "active"
+        or msg.startswith("enable")
+    ):
         return True
     else:
         return False
 
 
-async def aclose_sockets(sc_socket: trio.SocketStream | trio.SSLStream | None = None) -> None:
+async def aclose_sockets(
+    sc_socket: trio.SocketStream | trio.SSLStream | None = None,
+) -> None:
     """Close both irc-server and irc-client sockets together
 
-     @param sc_socket: only one out of the two sockets is rqeuired
-     @return: None
-     :rtype: None
+    @param sc_socket: only one out of the two sockets is rqeuired
+    @return: None
+    :rtype: None
 
-     """
+    """
     await send_quit(sc_socket)
     return None
+
 
 async def send_quit(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
     """
@@ -50,18 +65,17 @@ async def send_quit(sc_socket: trio.SocketStream | trio.SSLStream) -> None:
 
     if not sc_socket:
         return
-    from ..trio_ircproxy.actions import send_quit as action_send_quit
+
     try:
-        if SocketData.which_socket[sc_socket] == 'cs':
-            client_socket = sc_socket
+        if SocketData.which_socket[sc_socket] == "cs":
             server_socket = SocketData.mysockets[sc_socket]
         else:
             server_socket = sc_socket
-            client_socket = SocketData.mysockets[sc_socket]
-    except (KeyError):
+    except KeyError:
         return None
     await actions.action_send_quit(server_socket)
     return None
+
 
 class SocketData:
     current_count: Dict[trio.SocketStream | trio.SSLStream, int]
@@ -71,33 +85,41 @@ class SocketData:
     myial_chan: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
     mychans: Dict[trio.SocketStream | trio.SSLStream, Set[str]] = {}
     mylang: Dict[trio.SocketStream | trio.SSLStream, str] = {}
-    mysockets: Dict[trio.SocketStream | trio.SSLStream, trio.SocketStream | trio.SSLStream] = {}
-    raw_005: Dict[trio.SocketStream | trio.SSLStream , Dict[str, str | int]] = {}
+    mysockets: Dict[
+        trio.SocketStream | trio.SSLStream, trio.SocketStream | trio.SSLStream
+    ] = {}
+    raw_005: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int]] = {}
     dcc_send: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
     dcc_chat: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str]] = {}
     dcc_null: Dict[trio.SocketStream | trio.SSLStream, bool] = {}
     conn_timeout: Dict[trio.SocketStream | trio.SSLStream, int] = {}
-    state: Dict[trio.SocketStream | trio.SSLStream, Dict[str, str | int | time | Set[str]]] = {}
+    state: Dict[
+        trio.SocketStream | trio.SSLStream, Dict[str, str | int | time | Set[str]]
+    ] = {}
     login: Dict[trio.SocketStream | trio.SSLStream, str | bool] = {}
     hostname: Dict[trio.SocketStream | trio.SSLStream, str] = {}
     which_socket: Dict[trio.SocketStream | trio.SSLStream, str] = {}
     user_power: dict[str, list[trio.SocketStream | trio.SSLStream]] = {}
     msg_count_send_buffer: Dict[trio.SocketStream | trio.SSLStream, int] = {}
+
     @classmethod
-    def create_data(cls, client_socket: trio.SocketStream | trio.SSLStream,
-                    server_socket: trio.SocketStream | trio.SSLStream):
+    def create_data(
+        cls,
+        client_socket: trio.SocketStream | trio.SSLStream,
+        server_socket: trio.SocketStream | trio.SSLStream,
+    ):
         """
         Create socket data and store all the necessary information in one location.
         Vars:
             :client_socket: The client socket.
         :server_socket: The server socket.
         """
-        cls.which_socket[client_socket] = 'cs'
-        cls.which_socket[server_socket] = 'ss'
-        cls.login[client_socket] = ''
+        cls.which_socket[client_socket] = "cs"
+        cls.which_socket[server_socket] = "ss"
+        cls.login[client_socket] = ""
         cls.conn_timeout[client_socket] = None
         cls.conn_timeout[server_socket] = None
-        cls.mylang[client_socket] = 'en'
+        cls.mylang[client_socket] = "en"
         cls.mysockets[client_socket] = server_socket
         cls.mysockets[server_socket] = client_socket
         cls.dcc_chat[client_socket] = {}
@@ -123,22 +145,27 @@ class SocketData:
         cls.raw_005[client_socket]["chanlimit"] = "#:250"
         cls.raw_005[client_socket]["kicklen"] = 180
         cls.raw_005[client_socket]["maxtargets"] = 4
-        cls.raw_005[client_socket]["maxlist"] = "b:250"   # "bIe:250"
+        cls.raw_005[client_socket]["maxlist"] = "b:250"  # "bIe:250"
         cls.raw_005[client_socket]["chanmodes"] = "b,k,l,psnmt"
         cls.raw_005[client_socket]["network"] = "no_network_" + str(randint(100, 9999))
         cls.send_buffer[server_socket] = deque()
         cls.send_buffer[client_socket] = deque()
         cls.state[client_socket] = dict()
-        cls.state[client_socket]['face_nicknet'] = '[' + 'client_socket' + ']'
-        cls.state[client_socket]['connected'] = 0
-        cls.state[client_socket]['doing'] = 'connecting'
-        cls.state[client_socket]['upper_nick'] = ''
-        cls.state[client_socket]['motd_def'] = yes_no(system_data.Settings_ini['settings']['skip_motd'])
+        cls.state[client_socket]["face_nicknet"] = "[" + "client_socket" + "]"
+        cls.state[client_socket]["connected"] = 0
+        cls.state[client_socket]["doing"] = "connecting"
+        cls.state[client_socket]["upper_nick"] = ""
+        cls.state[client_socket]["motd_def"] = yes_no(
+            system_data.Settings_ini["settings"]["skip_motd"]
+        )
 
     @classmethod
-    async def raw_send(cls, to_socket: trio.SocketStream | trio.SSLStream,
-                       other_sockets: list[trio.SocketStream | trio.SSLStream] | None | False = None,
-                       msg: str | bytes = '') -> bool:
+    async def raw_send(
+        cls,
+        to_socket: trio.SocketStream | trio.SSLStream,
+        other_sockets: list[trio.SocketStream | trio.SSLStream] | None | False = None,
+        msg: str | bytes = "",
+    ) -> bool:
         """
         Sends a raw message to a given socket.
         Args:
@@ -153,48 +180,57 @@ class SocketData:
         with trio.fail_after(10):
             try:
                 if not isinstance(msg, bytes):
-                    msg = msg.encode('utf-8',errors='replace')
-                if not msg.endswith(b'\n'):
-                    msg += b'\n'
+                    msg = msg.encode("utf-8", errors="replace")
+                if not msg.endswith(b"\n"):
+                    msg += b"\n"
                 await to_socket.send_all(msg)
                 if other_sockets:
                     for other_socket in other_sockets:
                         if other_socket is not to_socket:
                             await other_socket.send_all(msg)
-            except (trio.BrokenResourceError, trio.ClosedResourceError, gaierror,
-                    trio.TooSlowError, OSError, trio.BusyResourceError, ExceptionGroup, BaseException,
-                    BaseExceptionGroup):
+            except (
+                trio.BrokenResourceError,
+                trio.ClosedResourceError,
+                gaierror,
+                trio.TooSlowError,
+                OSError,
+                trio.BusyResourceError,
+                ExceptionGroup,
+                BaseException,
+                BaseExceptionGroup,
+            ):
                 return False
             return True
 
     @classmethod
-    def set_face_nicknet(cls, client_socket: trio.SocketStream | trio.SSLStream) -> None:
+    def set_face_nicknet(
+        cls, client_socket: trio.SocketStream | trio.SSLStream
+    ) -> None:
         face: str
-        if client_socket not in cls.state or not cls.state[client_socket]['upper_nick']:
-            face = '[' + 'client_socket' + ']'
+        if client_socket not in cls.state or not cls.state[client_socket]["upper_nick"]:
+            face = "[" + "client_socket" + "]"
         else:
-            nick: str = cls.state[client_socket]['upper_nick']
-            net: str = cls.raw_005[client_socket]['network']
-            face = '[' + nick + '/' + net + ']'
-        cls.state[client_socket]['face_nicknet'] = face
+            nick: str = cls.state[client_socket]["upper_nick"]
+            net: str = cls.raw_005[client_socket]["network"]
+            face = "[" + nick + "/" + net + "]"
+        cls.state[client_socket]["face_nicknet"] = face
         return None
 
     @classmethod
     def echo(cls, client_socket, msg: str) -> None:
         if client_socket not in cls.state:
-            face: str = '[' + cls.hostname[client_socket] + '] '
+            face: str = "[" + cls.hostname[client_socket] + "] "
             print(face + msg)
         else:
-            print(cls.state[client_socket]['face_nicknet'] + ' ' + msg)
+            print(cls.state[client_socket]["face_nicknet"] + " " + msg)
 
     @classmethod
     def msg_to_client(cls, client_socket: trio.SocketStream | trio.SSLStream, msg: str):
         mynick = cls.mynick[client_socket]
-        if msg[0] != ':':
-            msg = ':' + msg
+        if msg[0] != ":":
+            msg = ":" + msg
         msg = f": {system_data.Settings_ini['settings']['status_nick']} {mynick} {msg}"
         cls.send_buffer[client_socket].append(msg)
-
 
     @classmethod
     def clear_data(cls, xxs: trio.SocketStream | trio.SSLStream) -> None:

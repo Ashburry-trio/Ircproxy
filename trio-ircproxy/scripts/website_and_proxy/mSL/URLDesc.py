@@ -1,339 +1,235 @@
-"""Utilities for analyzing web pages for safety, content category, and SEO metadata.
-
-This module fetches a URL, extracts and normalizes the page text, and applies
-heuristics plus a pre-trained NSFW classifier to estimate whether the content
-is sexual, violent, or gory. It also computes basic SEO information such as
-page title, meta description, and TF–IDF-based keywords, and returns a
-structured JSON-like result that can be cached on disk.
-"""
-
 import os
-import json
+import re
+import tempfile
+from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup
-from sklearn.feature_extraction.text import TfidfVectorizer
 from langdetect import detect
-from nsfw_detector import predict as nsfw_predict
+from nsfw_image_detector import NSFWDetector
 from PIL import Image
-import torch
 
-# --------------------------
-# Config
-# --------------------------
-CACHE_FILE = os.path.join(os.path.dirname(__file__), "settings", "url_cache.json")
+"""
+Written mostly by ChatGPT
 
-TEMP_IMAGE_DIR = os.path.join(os.path.dirname(__file__), "settings", "tmp_images")
+Works like this:
 
-if not os.path.exists(TEMP_IMAGE_DIR):
-    os.makedirs(TEMP_IMAGE_DIR)
+from  mSL.URLDesc import inspect_url
+import json
 
-# Load NSFW model
-NSFW_MODEL = nsfw_predict.load_model('nsfw_model.h5')
+url = "https://www.google.ca"
+result = inspect_url(url)
 
-# Violence/Gore model placeholder (use a proper model here)
-VIOLENCE_MODEL = None  # Replace with real classifier if available
+# Pretty print the JSON output
+print(json.dumps(result, indent=2))
 
-# Multilingual categories
-MULTI_LANG_CATEGORIES = {
-    "en": {
-        "sexual": {
-            "weight": 1.0,
-            "keywords": {
-                "porn", "xxx", "sex", "escort", "nude", "nsfw",
-                "fetish", "hentai", "camgirl", "onlyfans",
-                "nudity", "sexually explicit content"
-            },
-            "phrases": {
-                "hardcore sex",
-                "adult video",
-                "live cam sex",
-                "explicit depictions of sexual activity",
-                "this is an adult website"
-            }
-        },
-        "violence": {
-            "weight": 1.2,
-            "keywords": {"kill", "murder", "shooting", "assault"},
-            "phrases": {"how to kill", "school shooting"}
-        },
-        "gore": {
-            "weight": 1.5,
-            "keywords": {"gore", "blood", "beheading"},
-            "phrases": {"graphic violence"}
-        }
-    }
+"""
+cache = {}
+VIOLENCE_KEYWORDS = {
+    "kill",
+    "murder",
+    "shot",
+    "stab",
+    "assault",
+    "attack",
+    "blood",
+    "death",
+    "corpse",
+    "torture",
+    "war",
+    "assassin",
+    "assassinate",
+}
+GORE_KEYWORDS = {"gore", "dismembered", "decapitated", "organs", "guts", "mutilation"}
+SEXUAL_KEYWORDS = {
+    "sex",
+    "porn",
+    "nude",
+    "nudity",
+    "xxx",
+    "explicit",
+    "fuck",
+    "fucking",
+    "fucks",
+    "lesbian",
+    "cum",
+    "cumming",
+    "pussy",
+    "cock",
+    "creampie",
+    "deep throat",
 }
 
-NEGATIONS = {"no", "not", "never", "without", "anti", "prevent", "stop", "against"}
+
+# text cleaning
+def _clean_text(text):
+    return re.sub(r"\s+", " ", text).lower()
 
 
-# --------------------------
-# Helper Functions
-# --------------------------
-def load_cache():
-    """Load the cached URL analysis results from disk.
-
-    The cache is stored as a JSON file at :data:`CACHE_FILE` and maps absolute
-    URL strings to their previously computed analysis results.
-
-    Returns:
-        dict: Mapping of URL strings to previously computed analysis result
-        objects. If the cache file does not exist or cannot be read, an empty
-        dictionary is returned.
-    """
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+# extract image URLs
+def _extract_image_urls(soup, base_url):
+    return [
+        urljoin(base_url, img.get("src"))
+        for img in soup.find_all("img")
+        if img.get("src")
+    ]
 
 
-def save_cache(cache):
-    """Persist the URL analysis cache to disk.
-
-    Args:
-        cache (dict): Mapping from URL string to analysis result
-            dictionaries that should be serialized to ``CACHE_FILE``.
-    """
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, indent=2, ensure_ascii=False)
-
-
-def is_false_positive(text, keyword, window=5):
-    """Heuristically flag a keyword match as a likely false positive.
-
-    This helper looks for negation terms (for example, "no", "not", "never",
-    "without") in a window of tokens immediately preceding the keyword. If any
-    negation token is present, the match is treated as describing the absence of
-    the concept rather than the concept itself.
-
-    Args:
-        text (str): Full page text that is being analyzed.
-        keyword (str): Keyword that was matched in the text.
-        window (int, optional): Number of tokens before ``keyword`` to search for
-            negation markers. Defaults to 5.
-
-    Returns:
-        bool: ``True`` if the match is likely a false positive due to local
-        negation context, otherwise ``False``.
-    """
-    words = text.split()
-    for i, w in enumerate(words):
-        if w == keyword:
-            start = max(0, i - window)
-            context = words[start:i]
-            if any(n in context for n in NEGATIONS):
-                return True
-    return False
-
-
-# --------------------------
-# Image Analysis
-# --------------------------
-def analyze_image(img_path):
-    """Fetch and analyze a URL for safety, content category, and SEO signals.
-
-    This is the main entry point for the URL description helper. It optionally
-    returns cached results if the URL has been analyzed before, otherwise it:
-
-    * Downloads the page HTML.
-    * Strips non-content tags such as ``<script>``, ``<style>``, and ``<noscript>``.
-    * Normalizes and truncates the visible text content.
-    * Detects the page language and selects language-specific category
-      definitions.
-    * Computes category scores (for example, sexual, violence, gore) based on
-      keyword and phrase hits, including a simple negation-aware false-positive
-      filter.
-    * Derives an overall content rating (Everyone / Teen / Adult) from the
-      weighted scores.
-    * Extracts basic SEO information (page title, meta description, meta
-      keywords, and TF–IDF-based keywords).
-    * Downloads, classifies, and then deletes images referenced by ``<img>``
-      tags using :func:`analyze_image`.
-    * Caches the final result on disk for future calls.
-
-    Args:
-        url (str): Absolute URL to fetch and analyze.
-
-    Returns:
-        dict | None: A structured result dictionary containing the following
-        top-level keys when analysis succeeds::
-
-            {
-                "url": str,
-                "rating": str,
-                "confidence_percent": float,
-                "language": str,
-                "mobile_friendly": bool,
-                "seo": {
-                    "title": str | None,
-                    "description": str | None,
-                    "meta_keywords": str | None,
-                    "extracted_keywords": list[str],
-                },
-                "content_analysis": dict,
-                "images": list[dict],
-            }
-
-        If the request fails or cannot be completed, ``None`` may be returned
-        depending on how network exceptions are handled in the caller.
-
-    Raises:
-        requests.RequestException: If the HTTP request fails and exceptions are
-            not suppressed.
-        langdetect.lang_detect_exception.LangDetectException: If language
-            detection fails before being caught.
-    """
-    adult_score = 0.0
-    violence_score = 0.0
-
+# download an image, return local path
+def _download_image(url):
     try:
-        scores = nsfw_predict.classify(NSFW_MODEL, img_path)
-        adult_score = scores[img_path].get('porn', 0) + scores[img_path].get('hentai', 0) + scores[img_path].get('sexy',
-                                                                                                                 0)
-        adult_score = round(adult_score, 4)
-    except:
-        adult_score = 0.0
-
-    # Placeholder violence detection
-    # Replace with real model inference for actual violence/gore detection
-    violence_score = 0.0
-
-    return adult_score, violence_score
+        r = requests.get(url, timeout=10, stream=True)
+        if r.status_code != 200:
+            return None
+        fd, path = tempfile.mkstemp(".jpg")
+        with os.fdopen(fd, "wb") as f:
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
+        return path
+    except Exception:
+        return None
 
 
-# --------------------------
-# Main Analyzer
-# --------------------------
-def analyze_url(url):
-    # Load cache
-    cache = load_cache()
-    if url in cache:
-        print(f"[CACHE HIT] {url}")
+# text-based violence/gore/sexual scoring
+def _analyze_text(text, meta_description=None, meta_keywords=None):
+    words = set(text.split())
+
+    # Include meta description/keywords
+    if meta_description:
+        words |= set(meta_description.lower().split())
+    if meta_keywords:
+        for kw in meta_keywords:
+            words |= set(kw.lower().split())
+
+    return {
+        "violence_score": len(words & VIOLENCE_KEYWORDS),
+        "gore_score": len(words & GORE_KEYWORDS),
+        "sexual_keywords_count": len(words & SEXUAL_KEYWORDS),
+    }
+
+
+# modern NSFW image scoring
+def _analyze_images(image_urls):
+    detector = NSFWDetector()
+    max_score = 0.0
+
+    for url in image_urls[:8]:
+        path = _download_image(url)
+        if not path:
+            continue
+        try:
+            img = Image.open(path).convert("RGB")
+            # returns dict of class -> probability
+            probs = detector.predict_proba(img)
+            # "nsfw" class prob or highest non-safe probability
+            score = max(v for v in probs.values())
+            max_score = max(max_score, score)
+        except Exception:
+            pass
+        finally:
+            os.remove(path)
+
+    return round(max_score, 3)
+
+
+# determine PG / PG13 / R / Adult rating
+def _determine_rating(violence, gore, sexual_count, nsfw_score):
+    if nsfw_score > 0.85 or sexual_count > 5:
+        return "Adult"
+    if gore > 0 or violence > 6 or nsfw_score > 0.6:
+        return "R"
+    if violence > 0 or sexual_count > 0 or nsfw_score > 0.3:
+        return "PG13"
+    return "PG"
+
+
+# combined score for sorting / thresholds
+def _calculate_content_score(violence, gore, sexual_count, nsfw_score):
+    nsfw_scaled = nsfw_score * 10
+    score = (violence * 2) + (gore * 3) + (sexual_count * 1.5) + nsfw_scaled
+    return round(score, 2)
+
+
+# map rating + content_score to an IRC‑friendly flag
+def _irc_flag(rating, content_score):
+    if rating == "Adult" or content_score > 10:
+        return "ADULT"
+    if rating == "R" or content_score > 5:
+        return "RATED-R"
+    if rating == "PG13" or content_score > 2:
+        return "WARNING"
+    return "SAFE"
+
+
+# main API
+def inspect_url(url: str) -> dict:
+    global cache
+    if url in cache.keys():
         return cache[url]
 
-    print(f"[PROCESSING] {url}")
-    headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        r = requests.get(url, headers=headers, timeout=10)
-        r.raise_for_status()
-    except Exception
-        return
+    response = requests.get(url, timeout=15, headers={"User-Agent": "URLInspector/1.0"})
+    response.raise_for_status()
 
-    ```python
+    soup = BeautifulSoup(response.text, "html.parser")
+    page_text = _clean_text(soup.get_text(" "))
 
+    # extract meta
+    meta_description = next(
+        (
+            meta.get("content")
+            for meta in soup.find_all("meta")
+            if meta.get("name", "").lower() == "description"
+        ),
+        None,
+    )
+    meta_keywords = next(
+        (
+            meta.get("content").split(",")
+            for meta in soup.find_all("meta")
+            if meta.get("name", "").lower() == "keywords"
+        ),
+        [],
+    )
 
-soup = BeautifulSoup(r.text, "html.parser")
+    # analyze text + meta
+    text_scores = _analyze_text(page_text, meta_description, meta_keywords)
 
-# Remove unwanted tags
-for tag in soup(["script", "style", "noscript"]):
-    tag.decompose()
+    # analyze images
+    image_urls = _extract_image_urls(soup, url)
+    max_nsfw_score = _analyze_images(image_urls)
 
-# Extract and process text
-text = " ".join(soup.stripped_strings).lower()[:40000]
+    # boost score if sexual keywords + NSFW images missing
+    if max_nsfw_score < 0.1 and text_scores["sexual_keywords_count"] >= 2:
+        max_nsfw_score = 0.9  # treat as adult
 
-# Language detection
-try:
-    language = detect(text)
-except:
-    language = "en"
+    rating = _determine_rating(
+        text_scores["violence_score"],
+        text_scores["gore_score"],
+        text_scores["sexual_keywords_count"],
+        max_nsfw_score,
+    )
 
-lang_categories = MULTI_LANG_CATEGORIES.get(language, {})
-if not lang_categories:
-    lang_categories = MULTI_LANG_CATEGORIES.get("en", {})
+    content_score = _calculate_content_score(
+        text_scores["violence_score"],
+        text_scores["gore_score"],
+        text_scores["sexual_keywords_count"],
+        max_nsfw_score,
+    )
 
-# Check for mobile-friendliness
-mobile_friendly = bool(soup.find("meta", attrs={"name": "viewport"}))
+    irc_flag = _irc_flag(rating, content_score)
 
-# Content analysis
-category_results = {}
-total_weighted = 0
-total_possible = 0
-
-for category, cfg in lang_categories.items():
-    matched_keywords = [kw for kw in cfg["keywords"] if kw in text and not is_false_positive(text, kw)]
-    matched_phrases = [ph for ph in cfg["phrases"] if ph in text]
-    raw_hits = len(matched_keywords) + len(matched_phrases) * 2
-    raw_score = min(100, raw_hits * 15)
-    weighted_score = raw_score * cfg["weight"]
-
-    category_results[category] = {
-        "raw_score": raw_score,
-        "weighted_score": round(weighted_score, 2),
-        "matched_keywords": matched_keywords,
-        "matched_phrases": matched_phrases
+    data = {
+        "url": url,
+        "title": soup.title.string.strip() if soup.title else None,
+        "description": meta_description,
+        "keywords": meta_keywords,
+        "language": detect(page_text) if page_text else None,
+        "text_analysis": text_scores,
+        "max_nsfw_image_score": max_nsfw_score,
+        "rating": rating,
+        "content_score": content_score,
+        "irc_flag": irc_flag,
+        "image_count": len(image_urls),
     }
-
-    total_weighted += weighted_score
-    total_possible += 100 * cfg["weight"]
-
-confidence = round((total_weighted / total_possible) * 100, 2)
-rating = "Adult / R" if confidence >= 60 else "Teen / PG-13" if confidence >= 30 else "Everyone"
-
-# SEO and keywords extraction
-title = soup.title.string.strip() if soup.title else None
-
-
-def meta(name):
-    tag = soup.find("meta", attrs={"name": name})
-    return tag.get("content", "").strip() if tag else None
-
-
-vectorizer = TfidfVectorizer(stop_words="english", max_features=12)
-vectorizer.fit([text])
-extracted_keywords = vectorizer.get_feature_names_out().tolist()
-
-# Image processing
-images = []
-for img_tag in soup.find_all("img"):
-    img_url = img_tag.get("src")
-    if not img_url:
-        continue
-    try:
-        # Download image
-        img_data = requests.get(img_url, headers=headers, timeout=5).content
-        img_name = os.path.basename(img_url) or "temp.jpg"
-        new_img_file, img_ext = os.path.splitext(os.path.basename(img_path))
-        new_img_file += str(randint(1000, 9999)) + img_ext
-        img_path = os.path.join(TEMP_IMAGE_DIR, img_name)
-        with open(img_path, "wb") as f:
-            f.write(img_data)
-
-        # Analyze image
-        adult_score, violence_score = analyze_image(img_path)
-        combined_score = max(adult_score, violence_score)
-
-        images.append({
-            "url": img_url,
-            "adult_score": adult_score,
-            "violence_score": violence_score,
-            "combined_score": combined_score
-        })
-
-        # Delete image
-        os.remove(img_path)
-    except:
-        continue
-
-# Final JSON result
-result = {
-    "url": url,
-    "rating": rating,
-    "confidence_percent": confidence,
-    "language": language,
-    "mobile_friendly": mobile_friendly,
-    "seo": {
-        "title": title,
-        "description": meta("description"),
-        "meta_keywords": meta("keywords"),
-        "extracted_keywords": extracted_keywords
-    },
-    "content_analysis": category_results,
-    "images": images
-}
-
-# Save cache
-cache[url] = result
-save_cache(cache)
-
-return result
-```
+    cache[url] = data
+    return data

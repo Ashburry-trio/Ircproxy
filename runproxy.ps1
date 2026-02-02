@@ -17,15 +17,15 @@ echo port numbers or IP address nor passwords with anybody!
 echo.
 echo Calling ".\activate.ps1" and executing "python.exe .\trio-ircproxy\trio-ircproxy.py"
 echo please wait...
-IF EXIST ".\activate.ps1" (
-    call ".\activate.ps1"
+IF EXIST ".\activate.bat" (
+    call ".\activate.batss"
     goto end1
     )
- ELSE IF EXIST "%UserProfile%\Ircproxy\activate.ps1" (
-        call "%UserProfile%\Ircproxy\activate.ps1"
+ ELSE IF EXIST "%UserProfile%\Ircproxy\activate.bat" (
+        call "%UserProfile%\Ircproxy\activate.bat"
         goto end1
 )
-echo ERROR, unable to find "%UserProfile%\Ircproxy\activate.ps1"
+echo ERROR, unable to find "%UserProfile%\Ircproxy\activate.bat"
 goto done
 :end1
 IF EXIST ".\trio-ircproxy\trio-ircproxy.py" (

@@ -1,0 +1,50 @@
+[tool.flake8]
+max-line-length = 179
+max-complexity = 15
+count = true
+statistics = true
+
+exclude = [
+    ".git",
+    ".tox",
+    ".idea",
+    "*venv*",
+    "__pycache__",
+    "build",
+    "dist"
+]
+
+format = "html"
+
+[tool.black]
+line-length = 179
+target-version = ['py312']
+
+[tool.ruff]
+line-length = 179
+target-version = "py312"
+
+select = [
+    "E",
+    "F",
+    "W",
+    "C90",
+    "I"
+]
+
+ignore = [
+    "E203"
+]
+
+exclude = [
+    ".git",
+    ".tox",
+    ".idea",
+    "*venv*",
+    "__pycache__",
+    "build",
+    "dist"
+]
+
+[tool.ruff.mccabe]
+max-complexity = 50

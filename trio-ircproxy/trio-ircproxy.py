@@ -30,47 +30,42 @@
 
 from __future__ import annotations
 
+import os
 import ssl
-
-import trio
+import sys
+import unittest
 from base64 import b64decode
 
 # from configparser import ConfigParser
 from fnmatch import fnmatch
-from os import chdir
-from os import path
-from os.path import dirname
-from os.path import expanduser
-from os.path import realpath
+from os import chdir, path
+from os.path import dirname, expanduser, realpath
 
-# from pendulum import duration
-# from pif import get_public_ip
-# from random import randint
-from scripts.trio_ircproxy import actions
-from scripts.trio_ircproxy import ial
+# from cryptography.fernet import Fernet
+from pathlib import Path
+from sys import argv
+from time import time as ctime
+from typing import Deque
 
-# from scripts.trio_ircproxy import proxy_commands
-# from scripts.trio_ircproxy import xdcc_system
-from scripts.website_and_proxy import Settings_ini
-from scripts.website_and_proxy.socket_data import SocketData as socket_data
-from scripts.website_and_proxy.socket_data import aclose_sockets
-from scripts.website_and_proxy.system_data import SystemData as system_data
-from scripts.website_and_proxy.users import validate_login, verify_user_pwdfile
+import trio
+from chardet import detect
 
 # from sys import excepthook
 # from sys import exc_info
 # from socket import gaierror
 # from socket import error
-from markupsafe import escape
-from sys import argv
-from time import time as ctime
-from typing import Deque, Any, Coroutine
-from chardet import detect
-import sys
-import os
+# from pendulum import duration
+# from pif import get_public_ip
+# from random import randint
+from scripts.trio_ircproxy import actions, ial
 
-# from cryptography.fernet import Fernet
-from pathlib import Path
+# from scripts.trio_ircproxy import proxy_commands
+# from scripts.trio_ircproxy import xdcc_system
+from scripts.website_and_proxy.socket_data import SocketData as socket_data
+from scripts.website_and_proxy.socket_data import aclose_sockets
+from scripts.website_and_proxy.system_data import SystemData as system_data
+from scripts.website_and_proxy.users import verify_user_pwdfile
+
 _dir = path.dirname(path.abspath(__file__))
 home_dir = Path.home() / "Ircproxy" / "trio-ircproxy"
 home_dir = str(home_dir)
@@ -82,11 +77,12 @@ home_dir = str(home_dir)
 #     exit()
 chdir(realpath(dirname(expanduser(argv[0]))))
 
-VERSION_NUM = "3.0.1"
+
 WWW_SHORT_URL = "www.MyProxyIP.com"
 WWW_LONG_URL = "https://wwww.MyProxyIP.com/"
 NAKED_URL = "MyProxyIP.com"
 PA_URL = "https://ashburry.pythonanywhere.com"
+
 
 def colourstrip(data: str) -> str:
     """Strips the mIRC colour codes from the text in data
@@ -143,9 +139,6 @@ def colourstrip(data: str) -> str:
     return data
 
 
-import re
-
-
 def colourstrip_optimized(data: str) -> str:
     """
     Removes all mIRC formatting and color codes from the text, including codes with optional attached numbers and commas,
@@ -165,7 +158,7 @@ def colourstrip_optimized(data: str) -> str:
 
     # Control characters to be removed: bold (\x02), italics (\x1D), underline (\x1F), original format (\x0F),
     #  got one extra not sure which one.                                     strikethrough (\x16), reverse (\x1E)
-    control_chars = ["\x03", "\x1E", "\x02", "\x1D", "\x1F", "\x0F", "\x16", "\x0E"]
+    control_chars = ["\x03", "\x1e", "\x02", "\x1d", "\x1f", "\x0f", "\x16", "\x0e"]
 
     # Step 1: Remove color codes with the regex pattern
     data = re.sub(color_code_pattern, "", data)
@@ -175,9 +168,6 @@ def colourstrip_optimized(data: str) -> str:
         data = data.replace(char, "")
 
     return data
-
-
-import unittest
 
 
 class UnitTesting(unittest.TestCase):
@@ -276,7 +266,7 @@ def usable_decode(text: bytes | str) -> str:
     try:
         if text == b"":
             return ""
-        if type(text) == str:
+        if isinstance(text, str):
             return text
         decoded_text: str
         decoded_text = text.decode("latin1")
@@ -299,10 +289,11 @@ def usable_decode(text: bytes | str) -> str:
             # detect encoding:
             det: dict[str, str | float] = detect(text)
             return text.decode(det["encoding"], errors="replace")
+        return decoded_text
 
 
 def remove_newline(text: str) -> str:
-    if type(text) is bytes:
+    if isinstance(text, bytes):
         text = text.decode("utf8", replace="error'")
     text = text.strip()
     while "\x0c" in text:
@@ -369,23 +360,22 @@ async def proxy_make_irc_connection(
 
         await aclose_sockets(client_socket)
         return None
-    if port == 7000 and fnmatch(ss_hostname, "*.dal.net") == True:
+    if port == 7000 and fnmatch(ss_hostname, "*.dal.net") is True:
         server_socket = await make_normal_socket(client_socket, ss_hostname, port)
-    elif fnmatch(ss_hostname, "*.undernet.org") == True:
+    elif fnmatch(ss_hostname, "*.undernet.org") is True:
         server_socket = await make_normal_socket(client_socket, ss_hostname, port)
     elif port in (6697, 9999, 443, 6699, 6999, 7070, 7000):
         server_socket = await make_SSL_socket(client_socket, ss_hostname, port)
     else:
         server_socket = await make_normal_socket(client_socket, ss_hostname, port)
     try:
-        if server_socket == None:
+        if server_socket is None:
             return
         socket_data.create_data(client_socket, server_socket)
         socket_data.hostname[server_socket] = ss_hostname + ":" + str(port)
-        with trio.CancelScope() as scope2:
+        with trio.CancelScope():
             async with trio.open_nursery() as nursery:
                 try:
-
                     # Server_socket marked by 'ss' as the last parameter, writes to cs
                     nursery.start_soon(
                         socket_received_chunk, client_socket, server_socket, "ss"
@@ -689,9 +679,6 @@ async def script_command(client_socket, server, line):
         target = ""
 
 
-import translate
-
-
 def isme(client_socket, server, nick, target="") -> bool:
     """Check if server is cs or nick is mynick or nick is
         *Status and return True or False
@@ -721,7 +708,7 @@ catch_all = {}
 class UserCommands(object):
     @classmethod
     async def user_PART(cls, client_socket, server, source, chan) -> bool:
-        source_full = source
+        # source_full = source
         if "!" in source:
             source = source.split("!")[0]
         source = source.lower()
@@ -729,7 +716,7 @@ class UserCommands(object):
 
     @classmethod
     async def user_QUIT(cls, client_socket, source) -> bool:
-        source_full = source
+        # source_full = source
         if "!" in source:
             source = source.split("!")[0]
         source = source.lower()
@@ -739,7 +726,7 @@ class UserCommands(object):
 
     @classmethod
     async def user_nick_change(cls, client_socket, source, target) -> bool:
-        source_full = source
+        #        source_full = source
         if "!" in source:
             source = source.split("!")[0]
         source = source.lower()
@@ -760,9 +747,9 @@ class UserCommands(object):
     ) -> bool:
         """Execute a user command if it exists."""
         if "!" in source_nick:
-            source = source_nick
+            # source = source_nick
             source_nick = source_nick.split("!")[0]
-            target = target_nick
+            # target = target_nick
         target_nick = target_nick.lower()
         source_nick = source_nick.lower()
         if server == "cs":
@@ -771,7 +758,7 @@ class UserCommands(object):
             await UserCommands.User_CMD[cmd](
                 client_socket, server, source_nick, target_nick, cmd, parms
             )
-        except (Exception, ExceptionGroup) as e:
+        except (Exception, ExceptionGroup):
             # Write straight to a socket with a message for/to self (avoid the server when writting to self
             pass
 
@@ -795,29 +782,29 @@ async def ss_updateial(
         :@return: bool or SNone. False if silenced or None if relayed to client.
 
     """
-    newnick: str
-    awaymsg: str
+    # newnick: str
+    # awaymsg: str
     return_silent: bool = False
     chan: str = ""
-    upper_nick_src: str
+    # upper_nick_src: str
     upper_nick_full_src: str
     original_line: str = single_line
     orig_upper_split: list[str] = colourstrip(single_line).split(" ")
     split_line: list[str] = colourstrip(single_line).lower().split()
     nick_src: str = single_line.split(" ")[0].split("!")[0].lower()
-    src_nick_full: str = single_line.split(" ")[0].lower()
-    upper_nick_src: str
-    upper_nick_dest: str
-    old_nick: str
-    source_upper: str
-    source: str
-    my_usernick = socket_data.mynick[client_socket]
+    # src_nick_full: str = single_line.split(" ")[0].lower()
+    #  upper_nick_src: str
+    # upper_nick_dest: str
+    # old_nick: str
+    # source_upper: str
+    # source: str
+    # my_usernick = socket_data.mynick[client_socket]
     if original_line[0] == "@":
-        single_line = " ".join(single_line.split(" ")[1:])
+        # single_line = " ".join(single_line.split(" ")[1:])
         orig_upper_split = original_line.split(" ")[1:]
         split_line = split_line[1:]
     if "!" in split_line[0] or "." in split_line[0] and split_line[0][0] == ":":
-        upper_nick_src: str = orig_upper_split[0].split("!")[0].lstrip(":")
+        #  upper_nick_src: str = orig_upper_split[0].split("!")[0].lstrip(":")
         upper_nick_full_src: str = orig_upper_split[0]
         return_silent = ial.IALData.ial_add_nick(
             client_socket, nick_src, upper_nick_full_src.lower(), chan
@@ -984,7 +971,7 @@ async def ss_received_line(
     """
     # from above ss_received_chunk()
     dest_socket: trio.SocketStream | trio.SSLStream = client_socket
-    nick_src: str = ""
+    # nick_src: str = ""
     original_line: str = single_line
     single_line = single_line.lower()
     # actions.sc_send(dest_socket, original_line)
@@ -1020,15 +1007,15 @@ async def ss_received_line(
     if ial_send is False:
         await trio.sleep(0)
         return None
-    source_line: str
+    # source_line: str
     if single_line[0] == ":":
-        source_line = split_line[0]
+        # source_line = split_line[0]
         del split_line[0]
-        single_line = " ".join(split_line)
+    #  single_line = " ".join(split_line)
 
-    if "!" in orig_upper_split[0]:
-        upper_nick_src = orig_upper_split[0].split("!")[0].lstrip(":")
-        nick_src = upper_nick_src.lower()
+    # if "!" in orig_upper_split[0]:
+    #    upper_nick_src = orig_upper_split[0].split("!")[0].lstrip(":")
+    # nick_src = upper_nick_src.lower()
 
     if len(split_line) == 1:
         actions.sc_send(dest_socket, original_line)
@@ -1339,7 +1326,6 @@ async def authenticate_proxy(auth_lines: list[str]) -> bool | str:
     while True:
         if i > len_lines or len_lines == 0:
             del i
-            del auth
             del len_lines
             del auth_lines
             return False
@@ -1428,7 +1414,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
     byte_string_data: bytes = b""
     auth: bool | None | tuple[str, str] | list[str, str]
     bytes_data: bytes
-    byte_string: str = ""
+    # byte_string: str = ""
     with trio.move_on_after(60) as cancel_scope:
         while True:
 
@@ -1492,7 +1478,7 @@ async def proxy_server_handler(cs_before_connect: trio.SocketStream) -> None:
 
         except EndSession:
             pass
-    except (Exception, ExceptionGroup) as e:
+    except (Exception, ExceptionGroup):
         pass
     finally:
         await aclose_both(cs_before_connect)
@@ -1606,7 +1592,6 @@ async def start_proxy_listener():
                 + "\nMaybe trio-ircproxy.py is already running somewhere? Open your browser to "
                 + '\n"http://www.myproxyip.com/config/status.html".'
                 + "\n\nYour identd server port (113) may already be in use! Perhaps you have an IRC client running."
-
             )
 
             await quit_all()
@@ -1638,7 +1623,6 @@ async def quit_all() -> None:
 
 def begin_server() -> None:
     """Start the trio_ircproxy.py proxy server"""
-    import dis
 
     # dis.dis(start_proxy_listener)
     system_data.make_settings()
